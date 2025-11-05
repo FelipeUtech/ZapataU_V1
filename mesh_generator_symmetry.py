@@ -178,9 +178,10 @@ class MeshGeneratorSymmetry:
         for k, z in enumerate(z_footing):
             for j, y in enumerate(y_footing):
                 for i, x in enumerate(x_footing):
-                    # Si está en la base (z=z_top), conectar con nodos existentes del suelo
-                    if k == NZ_FOOTING:  # Superior de zapata
-                        existing_node = self._find_nearest_node(x, y, z)
+                    # Si está en la base (z=z_bottom), conectar con nodos existentes del suelo
+                    if k == 0:  # Base de zapata - conectar con suelo
+                        # Tolerancia más grande para compensar malla no-regular del suelo
+                        existing_node = self._find_nearest_node(x, y, z, tolerance=0.15)
                         if existing_node:
                             footing_node_map[(i, j, k)] = existing_node
                             continue
