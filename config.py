@@ -30,19 +30,20 @@ FOOTING_CENTER_Y = SOIL_WIDTH_Y / 2.0
 # DISCRETIZACIÓN DE LA MALLA
 # =============================
 # Zona debajo de la zapata (malla refinada)
-NX_UNDER_FOOTING = 8     # Elementos en X bajo zapata
-NY_UNDER_FOOTING = 8     # Elementos en Y bajo zapata
-NZ_UNDER_FOOTING = 10    # Elementos en Z bajo zapata (primeros metros)
+# Elementos rectangulares: más pequeños en X,Y y más alargados en Z
+NX_UNDER_FOOTING = 10    # Elementos en X bajo zapata (más refinado)
+NY_UNDER_FOOTING = 10    # Elementos en Y bajo zapata (más refinado)
+NZ_UNDER_FOOTING = 15    # Elementos en Z bajo zapata (más alargados verticalmente)
 
 # Zona lateral (malla más gruesa)
-NX_LATERAL = 6           # Elementos a cada lado de la zapata en X
-NY_LATERAL = 6           # Elementos a cada lado de la zapata en Y
-NZ_DEEP = 8              # Elementos en profundidad (zona profunda)
+NX_LATERAL = 5           # Elementos a cada lado de la zapata en X
+NY_LATERAL = 5           # Elementos a cada lado de la zapata en Y
+NZ_DEEP = 10             # Elementos en profundidad (zona profunda)
 
 # Discretización de la zapata
-NX_FOOTING = 4           # Elementos en X de la zapata
-NY_FOOTING = 4           # Elementos en Y de la zapata
-NZ_FOOTING = 2           # Elementos en Z de la zapata
+NX_FOOTING = 6           # Elementos en X de la zapata (más refinado)
+NY_FOOTING = 6           # Elementos en Y de la zapata (más refinado)
+NZ_FOOTING = 3           # Elementos en Z de la zapata (más capas)
 
 # =============================
 # ESTRATOS DE SUELO
