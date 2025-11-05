@@ -75,6 +75,24 @@ class MeshGeneratorSymmetry:
         for k in range(nz):
             for j in range(ny):
                 for i in range(nx):
+                    # Calcular centro del elemento
+                    x_elem_center = (x_coords[i] + x_coords[i+1]) / 2
+                    y_elem_center = (y_coords[j] + y_coords[j+1]) / 2
+                    z_elem_center = (z_coords[k] + z_coords[k+1]) / 2
+
+                    # Verificar si el elemento está dentro de la región de la zapata
+                    # Zapata va desde (0,0,-Df-t) hasta (B/2, L/2, -Df)
+                    z_footing_bottom = -EMBEDMENT_DEPTH - FOOTING_THICKNESS
+                    z_footing_top = -EMBEDMENT_DEPTH
+
+                    in_footing_x = (x_elem_center >= x_foot_min and x_elem_center <= x_foot_max)
+                    in_footing_y = (y_elem_center >= y_foot_min and y_elem_center <= y_foot_max)
+                    in_footing_z = (z_elem_center >= z_footing_bottom and z_elem_center <= z_footing_top)
+
+                    # Si el elemento está en la zona de la zapata, no crearlo
+                    if in_footing_x and in_footing_y and in_footing_z:
+                        continue
+
                     # Obtener los 8 nodos del elemento brick
                     n1 = node_map[(i, j, k)]
                     n2 = node_map[(i+1, j, k)]
@@ -86,8 +104,7 @@ class MeshGeneratorSymmetry:
                     n8 = node_map[(i, j+1, k+1)]
 
                     # Determinar el estrato
-                    z_center = (z_coords[k] + z_coords[k+1]) / 2
-                    layer_index = get_layer_at_depth(z_center)
+                    layer_index = get_layer_at_depth(z_elem_center)
 
                     # Guardar información del elemento
                     self.soil_elements[self.element_counter] = {

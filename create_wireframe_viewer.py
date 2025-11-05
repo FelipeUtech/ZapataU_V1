@@ -69,8 +69,9 @@ def create_wireframe_viewer(mesh):
                 name=f'Estrato {i+1}: {layer["name"]}',
                 line=dict(
                     color=edge_colors[i],
-                    width=2
+                    width=0.8
                 ),
+                opacity=0.4,
                 hoverinfo='name',
                 showlegend=True
             ))
