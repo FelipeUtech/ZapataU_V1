@@ -1,0 +1,1 @@
+{\n  "name": "Python Dev Container",\n  "dockerFile": "Dockerfile",\n  "settings": {\n    "python.pythonPath": "/usr/local/bin/python"\n  },\n  "extensions": [\n    "ms-python.python",\n    "ms-toolsai.jupyter"\n  ],\n  "postCreateCommand": "pip install openseespy"\n}
