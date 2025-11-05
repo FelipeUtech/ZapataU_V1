@@ -54,12 +54,23 @@ class MeshGeneratorSymmetry:
         print(f"  Nodos en Y: {len(y_coords)}")
         print(f"  Nodos en Z: {len(z_coords)}")
 
-        # Crear nodos
+        # Crear nodos (excluyendo la zona encima de la zapata)
         node_map = {}  # Mapeo (i,j,k) -> node_tag
+        z_footing_bottom = -EMBEDMENT_DEPTH - FOOTING_THICKNESS
+        z_surface = 0.0
 
         for k, z in enumerate(z_coords):
             for j, y in enumerate(y_coords):
                 for i, x in enumerate(x_coords):
+                    # Verificar si el nodo está en la zona encima de la zapata
+                    in_footing_x = (x >= x_foot_min and x <= x_foot_max)
+                    in_footing_y = (y >= y_foot_min and y <= y_foot_max)
+                    in_footing_z = (z >= z_footing_bottom and z <= z_surface)
+
+                    # No crear nodo si está en la zona de la zapata o encima
+                    if in_footing_x and in_footing_y and in_footing_z:
+                        continue
+
                     ops.node(self.node_counter, x, y, z)
                     self.nodes[self.node_counter] = (x, y, z)
                     node_map[(i, j, k)] = self.node_counter
@@ -91,6 +102,16 @@ class MeshGeneratorSymmetry:
 
                     # Si el elemento está en la zona de la zapata o encima, no crearlo
                     if in_footing_x and in_footing_y and in_footing_z:
+                        continue
+
+                    # Verificar que todos los 8 nodos del elemento existan
+                    node_indices = [
+                        (i, j, k), (i+1, j, k), (i+1, j+1, k), (i, j+1, k),
+                        (i, j, k+1), (i+1, j, k+1), (i+1, j+1, k+1), (i, j+1, k+1)
+                    ]
+
+                    # Si algún nodo no existe, no crear el elemento
+                    if not all(idx in node_map for idx in node_indices):
                         continue
 
                     # Obtener los 8 nodos del elemento brick
