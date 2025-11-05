@@ -1,0 +1,23 @@
+============================================================
+RESUMEN DEL ANÁLISIS DE ZAPATA
+============================================================
+
+Fecha: 2025-11-05
+
+GEOMETRÍA:
+  Zapata: 3.0m × 3.0m × 0.6m
+  Dominio suelo: 20.0m × 20.0m × 20.0m
+
+CARGAS:
+  Carga total: 1127.14 kN
+  Presión contacto: 125.24 kPa
+
+RESULTADOS PRINCIPALES:
+  Asentamiento máximo: 28.5787 mm
+  Asentamiento promedio: 28.5787 mm
+  Asentamiento diferencial: 0.0000 mm
+
+VERIFICACIÓN:
+  Relación diferencial: 0.00%
+  ✗ Asentamiento > 25mm (REVISAR)
+  ✓ Asentamiento diferencial < 10% (ACEPTABLE)
