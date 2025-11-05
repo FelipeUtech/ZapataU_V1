@@ -9,40 +9,53 @@ import numpy as np
 # =============================
 # GEOMETRÍA DE LA ZAPATA
 # =============================
-FOOTING_WIDTH = 2.0      # Ancho de la zapata B (m)
-FOOTING_LENGTH = 2.0     # Largo de la zapata L (m)
+FOOTING_WIDTH = 2.0      # Ancho de la zapata B (m) - TOTAL (modelo completo)
+FOOTING_LENGTH = 2.0     # Largo de la zapata L (m) - TOTAL (modelo completo)
 FOOTING_THICKNESS = 0.5  # Espesor de la zapata (m)
 EMBEDMENT_DEPTH = 1.5    # Profundidad de desplante Df (m)
 
 # =============================
+# MODELO DE SIMETRÍA (1/4)
+# =============================
+USE_SYMMETRY = True      # Usar modelo de 1/4 con simetría
+SYMMETRY_PLANES = ['X', 'Y']  # Planos de simetría en X=0 y Y=0
+
+# =============================
 # GEOMETRÍA DEL DOMINIO DE SUELO
 # =============================
-# Regla práctica: el dominio debe extenderse al menos 3-5 veces el ancho de la zapata
-SOIL_WIDTH_X = 15.0      # Ancho total del dominio en X (m)
-SOIL_WIDTH_Y = 15.0      # Ancho total del dominio en Y (m)
+# Dominio de 1/4 (por simetría)
+# El modelo va desde (0,0) hasta (SOIL_WIDTH_X, SOIL_WIDTH_Y)
+SOIL_WIDTH_X = 10.0      # Ancho del dominio 1/4 en X (m)
+SOIL_WIDTH_Y = 10.0      # Ancho del dominio 1/4 en Y (m)
 SOIL_DEPTH = 15.0        # Profundidad total del suelo (m)
 
-# Posición de la zapata (centrada)
-FOOTING_CENTER_X = SOIL_WIDTH_X / 2.0
-FOOTING_CENTER_Y = SOIL_WIDTH_Y / 2.0
+# Espacio libre sobre la zapata
+FREE_SPACE_HEIGHT = 0.5  # Altura del espacio libre sobre zapata (m)
+
+# Posición de la zapata (en esquina por simetría)
+# La zapata empieza en (0, 0) y se extiende a (FOOTING_WIDTH/2, FOOTING_LENGTH/2)
+FOOTING_START_X = 0.0
+FOOTING_START_Y = 0.0
+FOOTING_END_X = FOOTING_WIDTH / 2.0   # 1.0 m
+FOOTING_END_Y = FOOTING_LENGTH / 2.0  # 1.0 m
 
 # =============================
 # DISCRETIZACIÓN DE LA MALLA
 # =============================
-# Zona debajo de la zapata (malla refinada)
+# Zona debajo de la zapata (malla refinada) - Modelo 1/4
 # Elementos rectangulares: más pequeños en X,Y y más alargados en Z
-NX_UNDER_FOOTING = 10    # Elementos en X bajo zapata (más refinado)
-NY_UNDER_FOOTING = 10    # Elementos en Y bajo zapata (más refinado)
+NX_UNDER_FOOTING = 5     # Elementos en X bajo zapata (1/4 modelo)
+NY_UNDER_FOOTING = 5     # Elementos en Y bajo zapata (1/4 modelo)
 NZ_UNDER_FOOTING = 15    # Elementos en Z bajo zapata (más alargados verticalmente)
 
-# Zona lateral (malla más gruesa)
-NX_LATERAL = 5           # Elementos a cada lado de la zapata en X
-NY_LATERAL = 5           # Elementos a cada lado de la zapata en Y
+# Zona lateral (malla más gruesa) - Modelo 1/4
+NX_LATERAL = 9           # Elementos desde borde de zapata hasta límite en X
+NY_LATERAL = 9           # Elementos desde borde de zapata hasta límite en Y
 NZ_DEEP = 10             # Elementos en profundidad (zona profunda)
 
-# Discretización de la zapata
-NX_FOOTING = 6           # Elementos en X de la zapata (más refinado)
-NY_FOOTING = 6           # Elementos en Y de la zapata (más refinado)
+# Discretización de la zapata - Modelo 1/4
+NX_FOOTING = 5           # Elementos en X de la zapata (1/4 modelo)
+NY_FOOTING = 5           # Elementos en Y de la zapata (1/4 modelo)
 NZ_FOOTING = 3           # Elementos en Z de la zapata (más capas)
 
 # =============================
@@ -156,23 +169,37 @@ def get_layer_at_depth(z_coord):
 
 def print_configuration():
     """Imprime la configuración del modelo"""
-    print("="*60)
+    print("="*70)
     print("CONFIGURACIÓN DEL MODELO DE ENSAYO DE CARGA")
-    print("="*60)
+    if USE_SYMMETRY:
+        print("*** MODELO 1/4 CON SIMETRÍA ***")
+    print("="*70)
     print(f"\nZAPATA:")
-    print(f"  Dimensiones: {FOOTING_WIDTH} m x {FOOTING_LENGTH} m x {FOOTING_THICKNESS} m")
+    print(f"  Dimensiones totales: {FOOTING_WIDTH} m x {FOOTING_LENGTH} m x {FOOTING_THICKNESS} m")
+    if USE_SYMMETRY:
+        print(f"  Modelo 1/4: {FOOTING_END_X} m x {FOOTING_END_Y} m x {FOOTING_THICKNESS} m")
     print(f"  Profundidad de desplante (Df): {EMBEDMENT_DEPTH} m")
+    print(f"  Espacio libre sobre zapata: {FREE_SPACE_HEIGHT} m")
     print(f"\nDOMINIO DE SUELO:")
-    print(f"  Dimensiones: {SOIL_WIDTH_X} m x {SOIL_WIDTH_Y} m x {SOIL_DEPTH} m")
+    if USE_SYMMETRY:
+        print(f"  Modelo 1/4: {SOIL_WIDTH_X} m x {SOIL_WIDTH_Y} m x {SOIL_DEPTH} m")
+        print(f"  Equivalente a dominio completo: {SOIL_WIDTH_X*2} m x {SOIL_WIDTH_Y*2} m x {SOIL_DEPTH} m")
+        print(f"  Planos de simetría: X=0 y Y=0")
+    else:
+        print(f"  Dimensiones: {SOIL_WIDTH_X} m x {SOIL_WIDTH_Y} m x {SOIL_DEPTH} m")
     print(f"\nESTRATOS DE SUELO:")
     for i, layer in enumerate(SOIL_LAYERS):
         print(f"  Estrato {i+1}: {layer['name']}")
         print(f"    Profundidad: {layer['depth_top']} - {layer['depth_bottom']} m")
         print(f"    E = {layer['E']/1000:.1f} MPa, φ = {layer['friction_angle']}°, c = {layer['cohesion']} kPa")
     print(f"\nENSAYO DE CARGA:")
-    print(f"  Carga máxima: {LOAD_TEST['max_load']} kN")
+    if USE_SYMMETRY:
+        print(f"  Carga total: {LOAD_TEST['max_load']} kN")
+        print(f"  Carga en modelo 1/4: {LOAD_TEST['max_load']/4:.1f} kN")
+    else:
+        print(f"  Carga máxima: {LOAD_TEST['max_load']} kN")
     print(f"  Incrementos: {LOAD_TEST['num_steps']}")
-    print("="*60)
+    print("="*70)
 
 if __name__ == '__main__':
     print_configuration()
