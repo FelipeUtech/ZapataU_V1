@@ -1,0 +1,16 @@
+# Requerimientos para Simulación de Ensayo de Carga de Zapata
+
+# OpenSeesPy - Framework de análisis por elementos finitos
+openseespy>=3.4.0.1
+
+# NumPy - Operaciones numéricas
+numpy>=1.21.0
+
+# Matplotlib - Visualización y gráficos
+matplotlib>=3.5.0
+
+# Plotly - Visualización interactiva 3D
+plotly>=6.0.0
+
+# Opcional: Visualización avanzada (si está disponible)
+# vfo>=0.0.1
