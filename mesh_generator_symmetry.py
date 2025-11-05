@@ -80,16 +80,16 @@ class MeshGeneratorSymmetry:
                     y_elem_center = (y_coords[j] + y_coords[j+1]) / 2
                     z_elem_center = (z_coords[k] + z_coords[k+1]) / 2
 
-                    # Verificar si el elemento está dentro de la región de la zapata
-                    # Zapata va desde (0,0,-Df-t) hasta (B/2, L/2, -Df)
+                    # Verificar si el elemento está en la zona de la zapata o encima de ella
+                    # Eliminar elementos desde el fondo de la zapata hasta la superficie
                     z_footing_bottom = -EMBEDMENT_DEPTH - FOOTING_THICKNESS
-                    z_footing_top = -EMBEDMENT_DEPTH
+                    z_surface = 0.0
 
                     in_footing_x = (x_elem_center >= x_foot_min and x_elem_center <= x_foot_max)
                     in_footing_y = (y_elem_center >= y_foot_min and y_elem_center <= y_foot_max)
-                    in_footing_z = (z_elem_center >= z_footing_bottom and z_elem_center <= z_footing_top)
+                    in_footing_z = (z_elem_center >= z_footing_bottom and z_elem_center <= z_surface)
 
-                    # Si el elemento está en la zona de la zapata, no crearlo
+                    # Si el elemento está en la zona de la zapata o encima, no crearlo
                     if in_footing_x and in_footing_y and in_footing_z:
                         continue
 
