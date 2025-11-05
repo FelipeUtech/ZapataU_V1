@@ -54,20 +54,22 @@ class MeshGeneratorSymmetry:
         print(f"  Nodos en Y: {len(y_coords)}")
         print(f"  Nodos en Z: {len(z_coords)}")
 
-        # Crear nodos (excluyendo la zona encima de la zapata)
+        # Crear nodos (excluyendo solo la zona ENCIMA de la zapata)
         node_map = {}  # Mapeo (i,j,k) -> node_tag
-        z_footing_bottom = -EMBEDMENT_DEPTH - FOOTING_THICKNESS
+        z_footing_top = -EMBEDMENT_DEPTH  # Tope de la zapata en -1.5m
         z_surface = 0.0
 
         for k, z in enumerate(z_coords):
             for j, y in enumerate(y_coords):
                 for i, x in enumerate(x_coords):
-                    # Verificar si el nodo está en la zona encima de la zapata
-                    in_footing_x = (x >= x_foot_min and x <= x_foot_max)
-                    in_footing_y = (y >= y_foot_min and y <= y_foot_max)
-                    in_footing_z = (z >= z_footing_bottom and z <= z_surface)
+                    # Verificar si el nodo está ENCIMA de la zapata (no dentro ni debajo)
+                    # Solo eliminamos nodos con z > -1.5m en el área de la zapata
+                    # Usamos > y < (sin =) para mantener nodos en los bordes (contacto)
+                    in_footing_x = (x > x_foot_min and x < x_foot_max)
+                    in_footing_y = (y > y_foot_min and y < y_foot_max)
+                    in_footing_z = (z > z_footing_top and z <= z_surface)
 
-                    # No crear nodo si está en la zona de la zapata o encima
+                    # No crear nodo si está ENCIMA de la zapata (mantener laterales y base)
                     if in_footing_x and in_footing_y and in_footing_z:
                         continue
 
@@ -91,16 +93,16 @@ class MeshGeneratorSymmetry:
                     y_elem_center = (y_coords[j] + y_coords[j+1]) / 2
                     z_elem_center = (z_coords[k] + z_coords[k+1]) / 2
 
-                    # Verificar si el elemento está en la zona de la zapata o encima de ella
-                    # Eliminar elementos desde el fondo de la zapata hasta la superficie
-                    z_footing_bottom = -EMBEDMENT_DEPTH - FOOTING_THICKNESS
+                    # Verificar si el elemento está ENCIMA de la zapata
+                    # Solo eliminar elementos sobre z > -1.5m en el área de la zapata
+                    z_footing_top = -EMBEDMENT_DEPTH  # -1.5m
                     z_surface = 0.0
 
-                    in_footing_x = (x_elem_center >= x_foot_min and x_elem_center <= x_foot_max)
-                    in_footing_y = (y_elem_center >= y_foot_min and y_elem_center <= y_foot_max)
-                    in_footing_z = (z_elem_center >= z_footing_bottom and z_elem_center <= z_surface)
+                    in_footing_x = (x_elem_center > x_foot_min and x_elem_center < x_foot_max)
+                    in_footing_y = (y_elem_center > y_foot_min and y_elem_center < y_foot_max)
+                    in_footing_z = (z_elem_center > z_footing_top and z_elem_center <= z_surface)
 
-                    # Si el elemento está en la zona de la zapata o encima, no crearlo
+                    # Si el elemento está ENCIMA de la zapata, no crearlo
                     if in_footing_x and in_footing_y and in_footing_z:
                         continue
 
