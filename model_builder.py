@@ -7,7 +7,7 @@ Integra malla, materiales y condiciones de borde
 import openseespy.opensees as ops
 import numpy as np
 from config import *
-from mesh_generator import MeshGenerator
+from mesh_generator_symmetry import MeshGeneratorSymmetry
 from materials import MaterialManager
 
 class ModelBuilder:
@@ -35,7 +35,7 @@ class ModelBuilder:
 
         # 2. Generar malla
         print("\n[2/6] Generando malla...")
-        self.mesh = MeshGenerator()
+        self.mesh = MeshGeneratorSymmetry()
         self.mesh.generate_soil_mesh()
         self.mesh.generate_footing_mesh()
 
@@ -96,10 +96,27 @@ class ModelBuilder:
         if not self.is_built:
             raise RuntimeError("El modelo no ha sido construido.")
 
-        # Encontrar nodo central superior de la zapata
-        center_x = FOOTING_CENTER_X
-        center_y = FOOTING_CENTER_Y
-        z_top = -EMBEDMENT_DEPTH + FOOTING_THICKNESS
+        # En modelo de simetría 1/4:
+        # - Origen (0,0) está en el plano de simetría
+        # - Zapata va de (0,0) a (1.0, 1.0) en planta
+        if USE_SYMMETRY:
+            center_x = FOOTING_WIDTH / 4  # Centro del modelo 1/4
+            center_y = FOOTING_LENGTH / 4
+            z_top = -EMBEDMENT_DEPTH  # Superficie superior de zapata
+
+            x_min = FOOTING_START_X
+            x_max = FOOTING_END_X
+            y_min = FOOTING_START_Y
+            y_max = FOOTING_END_Y
+        else:
+            center_x = FOOTING_CENTER_X
+            center_y = FOOTING_CENTER_Y
+            z_top = -EMBEDMENT_DEPTH
+
+            x_min = FOOTING_CENTER_X - FOOTING_WIDTH / 2
+            x_max = FOOTING_CENTER_X + FOOTING_WIDTH / 2
+            y_min = FOOTING_CENTER_Y - FOOTING_LENGTH / 2
+            y_max = FOOTING_CENTER_Y + FOOTING_LENGTH / 2
 
         monitoring = {
             'center': None,
@@ -116,16 +133,17 @@ class ModelBuilder:
                     min_dist = dist
                     monitoring['center'] = node
 
-        # Buscar nodos en esquinas
-        x_min = FOOTING_CENTER_X - FOOTING_WIDTH / 2
-        x_max = FOOTING_CENTER_X + FOOTING_WIDTH / 2
-        y_min = FOOTING_CENTER_Y - FOOTING_LENGTH / 2
-        y_max = FOOTING_CENTER_Y + FOOTING_LENGTH / 2
-
-        corners = [
-            (x_min, y_min), (x_max, y_min),
-            (x_max, y_max), (x_min, y_max)
-        ]
+        # Buscar nodos en esquinas (solo relevante para modelo completo)
+        if USE_SYMMETRY:
+            corners = [
+                (x_min, y_min), (x_max, y_min),
+                (x_max, y_max), (x_min, y_max)
+            ]
+        else:
+            corners = [
+                (x_min, y_min), (x_max, y_min),
+                (x_max, y_max), (x_min, y_max)
+            ]
 
         for cx, cy in corners:
             min_dist = float('inf')

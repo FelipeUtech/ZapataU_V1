@@ -71,7 +71,8 @@ class MaterialManager:
                 print(f"  ADVERTENCIA: DruckerPrager no disponible")
                 print(f"  Usando ElasticIsotropic para estrato {i+1}")
 
-                ops.nDMaterial('ElasticIsotropic', mat_tag, E, nu, rho)
+                # No pasar rho para evitar problemas de unidades
+                ops.nDMaterial('ElasticIsotropic', mat_tag, E, nu)
 
                 print(f"  Estrato {i+1} ({layer['name']}): Material ElasticIsotropic")
                 print(f"    Tag: {mat_tag}, E={E/1000:.1f} MPa, nu={nu}")

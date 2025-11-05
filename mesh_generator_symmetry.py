@@ -213,6 +213,9 @@ class MeshGeneratorSymmetry:
         print(f"  Nodos totales (suelo + zapata): {len(self.nodes)}")
         print(f"  Elementos de zapata: {len(self.footing_elements)}")
 
+        # Limpiar nodos huérfanos (nodos sin elementos)
+        self._clean_orphan_nodes()
+
     def apply_boundary_conditions(self):
         """
         Aplica condiciones de borde al modelo 1/4
@@ -364,6 +367,36 @@ class MeshGeneratorSymmetry:
                      if abs(self.nodes[tag][2] - z_max) < 0.01]
 
         return load_nodes
+
+    def _clean_orphan_nodes(self):
+        """
+        Elimina nodos que no están conectados a ningún elemento
+        """
+        # Recolectar todos los nodos usados en elementos
+        nodes_in_use = set()
+
+        for elem_info in self.soil_elements.values():
+            nodes_in_use.update(elem_info['nodes'])
+
+        for elem_info in self.footing_elements:
+            nodes_in_use.update(elem_info['nodes'])
+
+        # Identificar nodos huérfanos
+        all_nodes = set(self.nodes.keys())
+        orphan_nodes = all_nodes - nodes_in_use
+
+        if len(orphan_nodes) > 0:
+            print(f"  Eliminando {len(orphan_nodes)} nodos huérfanos...")
+
+            # Eliminar de OpenSees y del diccionario
+            for node_tag in orphan_nodes:
+                try:
+                    ops.remove('node', node_tag)
+                except:
+                    pass
+                del self.nodes[node_tag]
+
+            print(f"  Nodos finales: {len(self.nodes)}")
 
 if __name__ == '__main__':
     # Test de generación de malla
