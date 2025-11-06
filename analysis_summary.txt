@@ -9,16 +9,16 @@ MODELO:
   Malla: graded
   Elementos: 14 × 14 × 24 = 4517
   Nodos: 5625
-  Estratos suelo: Estrato 1 (E=10 MPa, h=3.0m), Estrato 2 (E=20 MPa, h=10.0m), Estrato 3 (E=50 MPa, h=7.0m)
+  Estratos suelo: Estrato 1 (E=5 MPa, h=3.0m), Estrato 2 (E=20 MPa, h=10.0m), Estrato 3 (E=50 MPa, h=7.0m)
   Carga total: 334.76 kN
   Presión contacto: 148.78 kPa
 
 RESULTADOS:
-  Asentamiento máximo: 21.7912 mm
-  Asentamiento mínimo: 0.7820 mm
-  Asentamiento promedio: 4.6317 mm
-  Desviación estándar: 5.5091 mm
-  Diferencial: 21.0093 mm
-  Relación diferencial: 0.9641
+  Asentamiento máximo: 37.5549 mm
+  Asentamiento mínimo: 0.8763 mm
+  Asentamiento promedio: 6.3865 mm
+  Desviación estándar: 9.7736 mm
+  Diferencial: 36.6786 mm
+  Relación diferencial: 0.9767
 
 ================================================================================
