@@ -138,9 +138,13 @@ def generar_malla_refinada(dominio, zapata, params):
     y_exterior = np.arange(y_start_exterior, dominio['Ly'] + 0.01, dx_exterior)
     y_coords = np.concatenate([y_zapata, y_exterior])
 
-    # Coordenadas Z con transición
-    z_shallow = np.arange(0, -depth_transition - 0.01, -dz_shallow)
-    z_start_deep = -depth_transition - dz_deep
+    # Coordenadas Z con transición considerando profundidad de desplante Df
+    Df = zapata.get('Df', 0.0)  # Profundidad de desplante
+
+    # Zona excavada: desde z=0 hasta z=-Df (no crear nodos/elementos aquí para suelo)
+    # Suelo empieza desde z=-Df hacia abajo
+    z_shallow = np.arange(-Df, -depth_transition - Df - 0.01, -dz_shallow)
+    z_start_deep = -depth_transition - Df - dz_deep
     z_deep = np.arange(z_start_deep, -dominio['Lz'] - 0.01, -dz_deep)
     z_coords = np.concatenate([z_shallow, z_deep])
     z_coords = np.unique(z_coords)[::-1]  # Eliminar duplicados y ordenar
@@ -194,21 +198,29 @@ def generar_malla_gradual(dominio, zapata, params):
     dz_deep = params['dz_deep']
     depth_transition = params['depth_transition']
 
-    # Agregar plano en z=h_zapata para el tope de la zapata
+    # Agregar planos para zapata considerando profundidad de desplante Df
     h_zapata = zapata.get('h', 0.4)  # Altura de zapata
+    Df = zapata.get('Df', 0.0)  # Profundidad de desplante (0 = superficial)
 
-    # Capa de zapata: desde z=0 (tope de suelo) hasta z=h_zapata (tope de zapata)
-    z_zapata = np.array([h_zapata, 0.0])  # Dos planos: tope y base de zapata
+    # Zapata enterrada a profundidad Df:
+    # - Tope de zapata en z = -Df
+    # - Base de zapata en z = -Df - h_zapata
+    z_zapata_top = -Df
+    z_zapata_bottom = -Df - h_zapata
 
-    # Capas de suelo: desde z=0 hacia abajo
-    z_shallow = np.arange(0, -depth_transition - 0.01, -dz_surface)
-    z_start_deep = -depth_transition - dz_deep
+    # Planos de la zapata
+    z_zapata = np.array([z_zapata_bottom, z_zapata_top])
+
+    # Capas de suelo: desde z=-Df (base de excavación) hacia abajo
+    # No crear nodos/elementos en zona excavada (0 a -Df)
+    z_shallow = np.arange(z_zapata_top, -depth_transition - Df - 0.01, -dz_surface)
+    z_start_deep = -depth_transition - Df - dz_deep
     z_deep = np.arange(z_start_deep, -dominio['Lz'] - 0.01, -dz_deep)
     z_soil = np.concatenate([z_shallow, z_deep])
     z_soil = np.unique(z_soil)
 
     # Combinar zapata y suelo
-    z_coords = np.concatenate([z_zapata, z_soil[1:]])  # Excluir z=0 duplicado
+    z_coords = np.concatenate([z_zapata, z_soil[1:]])  # Excluir z=-Df duplicado
     z_coords = np.unique(z_coords)[::-1]  # Ordenar descendente
 
     return x_coords, y_coords, z_coords
@@ -458,10 +470,14 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
     element_counter = 1
     n_elements_zapata = 0
 
-    # Calcular límites de estratos (desde superficie z=0 hacia abajo)
+    # Obtener profundidad de desplante
+    Df = zapata.get('Df', 0.0)
+
+    # Calcular límites de estratos (desde z=-Df hacia abajo, no desde z=0)
+    # Los estratos empiezan desde el fondo de la excavación
     if estratos_suelo:
         limites_estratos = []
-        z_acum = 0.0
+        z_acum = -Df  # Empezar desde base de excavación
         for estrato in estratos_suelo:
             z_sup = z_acum
             z_inf = z_acum - estrato['espesor']
@@ -478,6 +494,11 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
     h_zapata = zapata['h']
     B_zapata = zapata['B']
     L_zapata = zapata['L']
+    Df = zapata.get('Df', 0.0)  # Profundidad de desplante
+
+    # Zapata enterrada: tope en z=-Df, base en z=-Df-h
+    z_zapata_top = -Df
+    z_zapata_bottom = -Df - h_zapata
 
     for k in range(nz):
         for j in range(ny):
@@ -498,9 +519,9 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
                 z_elem = (z_coords[k] + z_coords[k+1]) / 2.0
 
                 # Determinar si el elemento está en la zona de zapata
-                # Zapata va desde z=0 hasta z=h_zapata (hacia arriba)
+                # Zapata va desde z=-Df (tope) hasta z=-Df-h (base)
                 es_zapata = (x_elem <= B_zapata and y_elem <= L_zapata and
-                            0 <= z_elem <= h_zapata)
+                            z_zapata_bottom <= z_elem <= z_zapata_top)
 
                 if es_zapata:
                     mat_tag = mat_tag_zapata

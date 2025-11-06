@@ -83,7 +83,18 @@ Ly_quarter = 9.0  # Modelo 1/4: 9m
 Lz_soil = 20.0    # Profundidad: 20m
 B_quarter = 1.5   # B/2
 L_quarter = 1.5   # B/2
-h_zapata = 0.6
+
+# Leer profundidad de desplante desde config
+try:
+    from config import ZAPATA
+    h_zapata = ZAPATA.get('h', 0.6)
+    Df = ZAPATA.get('Df', 0.0)  # Profundidad de desplante (m)
+    print(f"✓ Df = {Df} m (profundidad de desplante desde config)")
+except:
+    h_zapata = 0.6
+    Df = 0.0
+    print("⚠ No se pudo leer config, usando Df=0.0m (superficie)")
+
 P_total_quarter = 1127.14 / 4.0
 E_soil = 20000.0  # kPa (20 MPa)
 E_concrete = 250000000.0  # kPa (250 GPa - 10× más rígida)
@@ -325,9 +336,10 @@ if np.sum(idx_y0) > 2:  # Necesitamos al menos 3 puntos
                      alpha=0.8, rstride=1, cstride=1,
                      linewidth=0, antialiased=True, shade=True, edgecolor='none')
 
-# ZAPATA
-zapata_z_top = 0
-zapata_z_bottom = -h_zapata
+# ZAPATA (considerando profundidad de desplante Df)
+# Tope de zapata en z=-Df, base en z=-Df-h
+zapata_z_top = -Df
+zapata_z_bottom = -Df - h_zapata
 zapata_corners = [
     [0, 0, zapata_z_top], [B_quarter, 0, zapata_z_top],
     [B_quarter, L_quarter, zapata_z_top], [0, L_quarter, zapata_z_top],
@@ -713,12 +725,14 @@ try:
 
         z_top = z_bottom
 
-    # Dibujar zapata en la superficie
-    zapata_rect = plt.Rectangle((0.3, 0), 0.4, -h_zapata,
+    # Dibujar zapata enterrada a profundidad Df
+    # Tope de zapata en z=-Df, base en z=-Df-h
+    zapata_rect = plt.Rectangle((0.3, -Df), 0.4, -h_zapata,
                                 facecolor='orange', edgecolor='darkorange',
                                 linewidth=3, alpha=0.8, zorder=10)
     ax_strata.add_patch(zapata_rect)
-    ax_strata.text(0.5, -h_zapata/2, 'ZAPATA', ha='center', va='center',
+    z_center_zapata = -Df - h_zapata/2
+    ax_strata.text(0.5, z_center_zapata, 'ZAPATA', ha='center', va='center',
                   fontsize=10, fontweight='bold', color='white', zorder=11)
 
     ax_strata.set_xlim(0, 1)
@@ -823,7 +837,7 @@ info_text = f"""
 📝 NOTAS:
    • Modelo 1/4 con simetría
    • Análisis elástico lineal
-   • Fundación superficial (Df=0)
+   • {'Fundación superficial (Df=0)' if Df == 0 else f'Fundación enterrada (Df={Df:.1f}m)'}
 """
 
 ax6.text(0.05, 0.99, info_text, transform=ax6.transAxes,
