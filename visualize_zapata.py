@@ -143,14 +143,36 @@ cmap_custom = LinearSegmentedColormap.from_list('settlement', colors_custom, N=n
 print("\nGenerando visualización mejorada...")
 
 plt.style.use('seaborn-v0_8-darkgrid')
-fig = plt.figure(figsize=(24, 16), facecolor='white')  # Reducido de 20 a 16 para eliminar espacio sobrante
-fig.suptitle('ANÁLISIS DE ZAPATA - MALLA GRADUAL OPTIMIZADA (6B-20m)',
-             fontsize=18, fontweight='bold', y=0.98)
+
+# Figura más ancha para acomodar panel de texto a la derecha
+fig = plt.figure(figsize=(28, 14), facecolor='white')
+
+# Usar GridSpec para mejor control del layout
+from matplotlib.gridspec import GridSpec
+gs = GridSpec(3, 4, figure=fig, width_ratios=[1, 1, 1, 0.8],
+              hspace=0.35, wspace=0.30, top=0.92, bottom=0.06, left=0.05, right=0.98)
+
+# ========================================
+# TÍTULO PROFESIONAL
+# ========================================
+fig.text(0.5, 0.97, 'ANÁLISIS DE FUNDACIÓN SUPERFICIAL - MODELO 3D ELEMENTOS FINITOS',
+         fontsize=20, fontweight='bold', ha='center', va='top')
+
+# Cuadro de título profesional
+title_text = """PROYECTO: Planta de Procesos Porvenir  |  CLIENTE: Hemco Mineros S.A.  |  CALCULÓ: S&R Ingeniería"""
+fig.text(0.5, 0.945, title_text,
+         fontsize=11, ha='center', va='top', style='italic',
+         bbox=dict(boxstyle='round,pad=0.5', facecolor='#E3F2FD', alpha=0.9,
+                   edgecolor='#1976D2', linewidth=2))
+
+# Extraer datos reales del modelo
+n_nodes_total = len(data_3d) if data_3d_available else len(surface_data)
+n_surface_nodes = len(surface_data)
 
 # ========================================
 # 1. VISTA ISOMÉTRICA PRINCIPAL
 # ========================================
-ax1 = fig.add_subplot(3, 3, 1, projection='3d')  # Layout 3x3
+ax1 = fig.add_subplot(gs[0, 0], projection='3d')  # Fila 0, columna 0
 
 # Crear grid de alta resolución para interpolación suave
 xi_iso = np.linspace(0, Lx_quarter, 80)  # Aumentado de 30 a 80 para mayor suavidad
@@ -360,7 +382,7 @@ ax1.text2D(0.98, 0.98, f'⬇ CARGA\n{P_total_quarter:.1f} kN', transform=ax1.tra
 # ========================================
 # 2. VISTA SUPERIOR - ASENTAMIENTOS
 # ========================================
-ax2 = fig.add_subplot(3, 3, 2)  # Layout 3x3
+ax2 = fig.add_subplot(gs[0, 1])  # Fila 0, columna 1
 
 # Contorno de asentamientos con alta resolución
 xi = np.linspace(0, Lx_quarter, 80)  # Aumentado para coincidir con isométrico
@@ -413,7 +435,7 @@ ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 # ========================================
 # 3. PERFIL VERTICAL - ASENTAMIENTO EN CENTRO DE ZAPATA
 # ========================================
-ax3 = fig.add_subplot(3, 3, 3)  # Layout 3x3 - perfil vertical
+ax3 = fig.add_subplot(gs[0, 2])  # Fila 0, columna 2
 
 print("  Calculando perfil vertical de asentamientos...")
 
@@ -534,7 +556,7 @@ print(f"    Profundidad de análisis: 0 a {Lz_soil} m")
 # ========================================
 # 4. VISTA 3D - SUPERFICIE HUNDIDA
 # ========================================
-ax4 = fig.add_subplot(3, 3, 4, projection='3d')  # Layout 3x3 - posición 4
+ax4 = fig.add_subplot(gs[1, 0], projection='3d')  # Fila 1, columna 0
 
 z_surf_hundido = z_surf  # Usar valores positivos para hundimiento hacia abajo
 
@@ -571,7 +593,7 @@ ax4.set_box_aspect([1, 1, 0.5])
 # ========================================
 # 5. PERFIL HORIZONTAL - ASENTAMIENTO EN EJE X (Y=0, Z=0)
 # ========================================
-ax5 = fig.add_subplot(3, 3, 5)  # Layout 3x3 - posición 5
+ax5 = fig.add_subplot(gs[1, 1])  # Fila 1, columna 1
 
 print("  Calculando perfil horizontal en eje X...")
 
@@ -645,79 +667,87 @@ ax5.set_ylim(0, max(z_surf) * 1.1)
 ax5.invert_yaxis()
 
 # ========================================
-# 6. INFORMACIÓN DEL MODELO
+# 6. PANEL DE INFORMACIÓN (DERECHA)
 # ========================================
-ax6 = fig.add_subplot(3, 3, (7, 9))  # Panel ocupa posiciones 7-9 (toda la fila 3)
+ax6 = fig.add_subplot(gs[:, 3])  # Toda la columna derecha
 ax6.axis('off')
 
+# Calcular estadísticas
 max_settlement = np.max(z_surf)
 min_settlement = np.min(z_surf)
 avg_settlement = np.mean(z_surf)
 std_settlement = np.std(z_surf)
 
+# Información del modelo con datos reales
 info_text = f"""
-╔═══════════════════════════════════════════════╗
-║  MODELO 6B-20m MALLA GRADUAL OPTIMIZADA      ║
-╚═══════════════════════════════════════════════╝
+╔══════════════════════════════════════╗
+║   DATOS DEL MODELO                   ║
+╚══════════════════════════════════════╝
 
-🏗️ GEOMETRÍA DEL CUADRANTE MODELADO:
-  📐 Dimensiones: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m
-  🔲 MALLA GRADUAL con transición suave
-  🔹 Zona zapata: 0.25m elementos (refinada)
-  🔸 Transición gradual: 0.25m → 1.5m
-  🔹 Zona superficial: 0.5m (0 a -5m)
-  🔸 Zona profunda: 0.5m → 3.3m (gradual)
-  📊 Total nodos: 6,069 (62% menos)
+📐 GEOMETRÍA:
+  • Dominio: {Lx_quarter:.1f}m × {Ly_quarter:.1f}m × {Lz_soil:.1f}m
+  • Zapata: {B_quarter:.2f}m × {L_quarter:.2f}m × {h_zapata:.2f}m
+  • Modelo: 1/4 con simetría
 
-🟧 ZAPATA RÍGIDA (CUARTO DE SECCIÓN):
-  📏 Zapata completa: {B}m × {B}m × {h_zapata}m
-  📏 Modelo 1/4: {B_quarter}m × {L_quarter}m × {h_zapata}m
-  📍 Posición: Esquina (0, 0, 0) - Df=0m ✓
-  🔗 Nodos cargados: {zapata_nodes_count}
-  💪 Material: Concreto 10× más rígido
-  🏋️ E_concrete: {E_concrete/1e6:.0f} GPa
+🔲 MALLA:
+  • Total nodos: {n_nodes_total:,}
+  • Nodos superficie: {n_surface_nodes:,}
+  • Nodos en zapata: {zapata_nodes_count}
+  • Tipo: Gradual adaptativa
 
-🔄 CONDICIONES DE SIMETRÍA:
-  ✅ Plano X=0: Restricción en dirección X
-  ✅ Plano Y=0: Restricción en dirección Y
-  ✅ Base Z=-{Lz_soil}m: Empotrada (3 GDL fijos)
+🟧 ZAPATA:
+  • E = {E_concrete/1e6:.0f} GPa (concreto)
+  • ν = 0.2
+  • h = {h_zapata:.2f}m
 
-🌍 MATERIAL DEL SUELO:
-  • Módulo elástico: {E_soil:.0f} kPa = {E_soil/1000:.0f} MPa
-  • Coef. Poisson: {nu_soil}
-  • Densidad: {rho_soil:.0f} kg/m³
-  • Tipo: Suelo medio-denso
+🌍 SUELO:
+  • Estratificado (ver reporte)
+  • ν = {nu_soil}
+  • ρ = {rho_soil:.0f} kg/m³
 
-🔻 CARGAS APLICADAS:
-  • Carga total zapata: 1127.14 kN
-  • Carga en 1/4: {P_total_quarter:.2f} kN
-  • Presión contacto: 125.24 kPa
-  • Carga por nodo: {abs(P_per_node):.2f} kN
+🔄 CONDICIONES DE BORDE:
+  • Plano X=0: Simetría
+  • Plano Y=0: Simetría
+  • Base: Empotrada
 
-📈 RESULTADOS DE ASENTAMIENTOS:
-  🔴 Máximo: {max_settlement:.4f} mm
-  🟢 Mínimo: {min_settlement:.4f} mm
-  🟡 Promedio: {avg_settlement:.4f} mm
-  📊 Desv. Estándar: {std_settlement:.4f} mm
-  📏 Diferencial: {max_settlement - min_settlement:.4f} mm
+🔻 CARGAS:
+  • Total (1/4): {P_total_quarter:.2f} kN
+  • Por nodo: {abs(P_per_node):.2f} kN
+  • Presión: 125.24 kPa
 
-📝 NOTA: Visualización del cuadrante 1/4.
-   El modelo completo se obtiene por reflexión.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  RESULTADOS DE ASENTAMIENTOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 ESTADÍSTICAS:
+  🔴 Máximo:     {max_settlement:.2f} mm
+  🟢 Mínimo:     {min_settlement:.2f} mm
+  🟡 Promedio:   {avg_settlement:.2f} mm
+  📏 Diferencial: {max_settlement - min_settlement:.2f} mm
+  📊 Desv. Est.:  {std_settlement:.2f} mm
+
+⚠️  CRITERIOS:
+  • Límite admisible: 25.0 mm
+  • Estado: {'✅ OK' if max_settlement < 25.0 else '⚠️  REVISAR'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 NOTAS:
+  • Modelo 1/4 con simetría
+  • Análisis elástico lineal
+  • Fundación superficial (Df=0)
 """
 
-ax6.text(0.03, 0.98, info_text, transform=ax6.transAxes,
-         fontsize=9.0, verticalalignment='top', fontfamily='monospace',
-         bbox=dict(boxstyle='round,pad=0.7', facecolor='#E8F4F8', alpha=0.95,
-                   edgecolor='#1E88E5', linewidth=2))
+ax6.text(0.05, 0.98, info_text, transform=ax6.transAxes,
+         fontsize=9.5, verticalalignment='top', fontfamily='monospace',
+         bbox=dict(boxstyle='round,pad=0.8', facecolor='#FAFAFA', alpha=0.98,
+                   edgecolor='#424242', linewidth=2))
 
 # ========================================
 # GUARDAR
 # ========================================
-plt.tight_layout(pad=1.5)
-plt.subplots_adjust(top=0.96, bottom=0.05, wspace=0.20, hspace=0.30)
-
 output_file = 'modelo_quarter_isometrico_graded.png'
-plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none', pad_inches=0.3)
 print(f"\n✓ Imagen isométrica MALLA GRADUAL guardada: {output_file}")
 print(f"  Resolución: 300 DPI")
 print(f"  Tamaño: {fig.get_size_inches()[0]:.1f} × {fig.get_size_inches()[1]:.1f} pulgadas")
