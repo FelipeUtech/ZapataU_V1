@@ -232,16 +232,83 @@ zapata_collection = Poly3DCollection(zapata_faces, alpha=0.7,
                                      facecolor='orange', edgecolor='darkorange', linewidth=2)
 ax1.add_collection3d(zapata_collection)
 
-# Planos de simetría
-# Plano X=0 (simetría en Y)
-yy, zz = np.meshgrid([0, Ly_quarter], [0, -Lz_soil])
-xx = np.zeros_like(yy)
-ax1.plot_surface(xx, yy, zz, alpha=0.15, color='cyan', edgecolor='none')
+# ========================================
+# PLANOS VERTICALES CON CONTORNOS DE ASENTAMIENTO
+# ========================================
 
-# Plano Y=0 (simetría en X)
-xx, zz = np.meshgrid([0, Lx_quarter], [0, -Lz_soil])
-yy = np.zeros_like(xx)
-ax1.plot_surface(xx, yy, zz, alpha=0.15, color='yellow', edgecolor='none')
+# Crear función de decaimiento con la profundidad (simplificada)
+# Los asentamientos decaen exponencialmente con la profundidad
+def settlement_decay(surface_settlement, depth):
+    """Decaimiento exponencial del asentamiento con la profundidad"""
+    # Factor de influencia de Boussinesq simplificado
+    decay_factor = np.exp(-depth / (B_quarter * 2))  # Decae con característica de 2x ancho zapata
+    return surface_settlement * decay_factor
+
+# PLANO X=0 (Plano Y-Z con contornos)
+# Crear grid para plano vertical X=0
+y_plane_x0 = np.linspace(0, Ly_quarter, 30)
+z_plane_x0 = np.linspace(0, -Lz_soil, 40)
+Y_x0, Z_x0 = np.meshgrid(y_plane_x0, z_plane_x0)
+
+# Interpolar asentamientos en superficie para Y en x=0
+y_surf_x0 = []
+settlement_surf_x0 = []
+for s in surface_settlements:
+    if abs(s[0]) < dx/2:  # Nodos cerca de x=0
+        y_surf_x0.append(s[1])
+        settlement_surf_x0.append(s[3])
+
+# Si hay datos, crear contornos
+if len(y_surf_x0) > 0:
+    # Interpolar en superficie
+    settlement_interp_x0 = np.interp(y_plane_x0, y_surf_x0, settlement_surf_x0)
+
+    # Proyectar hacia abajo con decaimiento
+    Settlement_x0 = np.zeros_like(Y_x0)
+    for i in range(len(y_plane_x0)):
+        for j in range(len(z_plane_x0)):
+            depth = abs(z_plane_x0[j])
+            Settlement_x0[j, i] = settlement_decay(settlement_interp_x0[i], depth)
+
+    # Dibujar superficie con contornos en plano X=0
+    X_x0 = np.zeros_like(Y_x0)
+    colors_x0 = plt.cm.jet(Settlement_x0 / np.nanmax(Zi_iso))
+    ax1.plot_surface(X_x0, Y_x0, Z_x0, facecolors=colors_x0,
+                     alpha=0.6, rstride=1, cstride=1,
+                     linewidth=0, antialiased=True, shade=False)
+
+# PLANO Y=0 (Plano X-Z con contornos)
+# Crear grid para plano vertical Y=0
+x_plane_y0 = np.linspace(0, Lx_quarter, 30)
+z_plane_y0 = np.linspace(0, -Lz_soil, 40)
+X_y0, Z_y0 = np.meshgrid(x_plane_y0, z_plane_y0)
+
+# Interpolar asentamientos en superficie para X en y=0
+x_surf_y0 = []
+settlement_surf_y0 = []
+for s in surface_settlements:
+    if abs(s[1]) < dy/2:  # Nodos cerca de y=0
+        x_surf_y0.append(s[0])
+        settlement_surf_y0.append(s[3])
+
+# Si hay datos, crear contornos
+if len(x_surf_y0) > 0:
+    # Interpolar en superficie
+    settlement_interp_y0 = np.interp(x_plane_y0, x_surf_y0, settlement_surf_y0)
+
+    # Proyectar hacia abajo con decaimiento
+    Settlement_y0 = np.zeros_like(X_y0)
+    for i in range(len(x_plane_y0)):
+        for j in range(len(z_plane_y0)):
+            depth = abs(z_plane_y0[j])
+            Settlement_y0[j, i] = settlement_decay(settlement_interp_y0[i], depth)
+
+    # Dibujar superficie con contornos en plano Y=0
+    Y_y0 = np.zeros_like(X_y0)
+    colors_y0 = plt.cm.jet(Settlement_y0 / np.nanmax(Zi_iso))
+    ax1.plot_surface(X_y0, Y_y0, Z_y0, facecolors=colors_y0,
+                     alpha=0.6, rstride=1, cstride=1,
+                     linewidth=0, antialiased=True, shade=False)
 
 # Etiquetas y configuración
 ax1.set_xlabel('X (m)', fontsize=12, fontweight='bold')
@@ -268,13 +335,13 @@ cbar_iso.set_label('Asentamiento (mm)', fontsize=10)
 ax1.text2D(0.02, 0.98, 'ZAPATA 1.5×1.5m\n(naranja)', transform=ax1.transAxes,
            fontsize=10, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='orange', alpha=0.7))
-ax1.text2D(0.02, 0.85, 'Plano X=0\n(cian)', transform=ax1.transAxes,
+ax1.text2D(0.02, 0.85, 'Plano X=0\n+ contornos', transform=ax1.transAxes,
            fontsize=9, verticalalignment='top',
-           bbox=dict(boxstyle='round', facecolor='cyan', alpha=0.5))
-ax1.text2D(0.02, 0.72, 'Plano Y=0\n(amarillo)', transform=ax1.transAxes,
+           bbox=dict(boxstyle='round', facecolor='cyan', alpha=0.6))
+ax1.text2D(0.02, 0.72, 'Plano Y=0\n+ contornos', transform=ax1.transAxes,
            fontsize=9, verticalalignment='top',
-           bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.5))
-ax1.text2D(0.02, 0.59, 'Contornos:\nAsentamientos', transform=ax1.transAxes,
+           bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.6))
+ax1.text2D(0.02, 0.59, 'Superficie:\ncontornos 3D', transform=ax1.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
@@ -424,9 +491,10 @@ print("="*70)
 print("\nCaracterísticas de la visualización:")
 print("  1. Vista isométrica 3D del cuadrante 1/4")
 print("  2. Zapata mostrada en naranja en la esquina")
-print("  3. Planos de simetría (cian y amarillo)")
-print("  4. Mapa de asentamientos en superficie")
-print("  5. Superficie 3D deformada")
-print("  6. Panel de información completo")
+print("  3. Planos de simetría CON contornos verticales")
+print("  4. Superficie horizontal CON contornos de asentamiento")
+print("  5. Mapa de asentamientos en vista en planta")
+print("  6. Superficie 3D deformada (hundida)")
+print("  7. Panel de información completo")
 print(f"\n✓ Modelo 1/4 SIN expandir")
 print(f"✓ Dominio: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m\n")
