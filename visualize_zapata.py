@@ -144,26 +144,55 @@ print("\nGenerando visualización mejorada...")
 
 plt.style.use('seaborn-v0_8-darkgrid')
 
-# Figura más ancha para acomodar panel de texto a la derecha
-fig = plt.figure(figsize=(28, 14), facecolor='white')
+# Figura optimizada
+fig = plt.figure(figsize=(32, 17), facecolor='white')
 
-# Usar GridSpec para mejor control del layout
+# Usar GridSpec para mejor control - 3 filas × 2 columnas gráficos + 1 columna info
 from matplotlib.gridspec import GridSpec
-gs = GridSpec(3, 4, figure=fig, width_ratios=[1, 1, 1, 0.8],
-              hspace=0.35, wspace=0.30, top=0.92, bottom=0.06, left=0.05, right=0.98)
+gs = GridSpec(3, 3, figure=fig, width_ratios=[1, 1, 0.60],
+              hspace=0.30, wspace=0.25, top=0.89, bottom=0.04, left=0.03, right=0.98)
 
 # ========================================
-# TÍTULO PROFESIONAL
+# TÍTULO PROFESIONAL MEJORADO
 # ========================================
-fig.text(0.5, 0.97, 'ANÁLISIS DE FUNDACIÓN SUPERFICIAL - MODELO 3D ELEMENTOS FINITOS',
-         fontsize=20, fontweight='bold', ha='center', va='top')
+# Caja azul del encabezado
+title_box = plt.Rectangle((0.03, 0.91), 0.95, 0.08, transform=fig.transFigure,
+                          facecolor='#0D47A1', edgecolor='#1565C0', linewidth=4,
+                          zorder=10, clip_on=False)
+fig.patches.append(title_box)
 
-# Cuadro de título profesional
-title_text = """PROYECTO: Planta de Procesos Porvenir  |  CLIENTE: Hemco Mineros S.A.  |  CALCULÓ: S&R Ingeniería"""
-fig.text(0.5, 0.945, title_text,
-         fontsize=11, ha='center', va='top', style='italic',
-         bbox=dict(boxstyle='round,pad=0.5', facecolor='#E3F2FD', alpha=0.9,
-                   edgecolor='#1976D2', linewidth=2))
+# Título principal en blanco
+fig.text(0.505, 0.970, 'ANÁLISIS GEOTÉCNICO DE FUNDACIÓN SUPERFICIAL',
+         fontsize=24, fontweight='bold', ha='center', va='top', color='white', zorder=11)
+
+fig.text(0.505, 0.945, 'MODELO TRIDIMENSIONAL • MÉTODO DE ELEMENTOS FINITOS',
+         fontsize=13, ha='center', va='top', color='#90CAF9',
+         style='italic', fontweight='bold', zorder=11)
+
+# Línea dorada separadora
+fig.add_artist(plt.Line2D([0.05, 0.96], [0.925, 0.925], transform=fig.transFigure,
+                          color='#FFC107', linewidth=3, zorder=11))
+
+# Información del proyecto en tabla organizada
+from datetime import datetime
+fecha = datetime.now().strftime('%d/%m/%Y')
+
+# Primera fila de información
+fig.text(0.06, 0.912, 'PROYECTO:', fontsize=10, fontweight='bold', ha='left', va='top', color='white', zorder=11)
+fig.text(0.17, 0.912, 'Planta de Procesos Porvenir', fontsize=10, ha='left', va='top', color='#E3F2FD', zorder=11)
+
+fig.text(0.42, 0.912, '│', fontsize=12, ha='center', va='top', color='#64B5F6', zorder=11)
+
+fig.text(0.45, 0.912, 'CLIENTE:', fontsize=10, fontweight='bold', ha='left', va='top', color='white', zorder=11)
+fig.text(0.54, 0.912, 'Hemco Mineros S.A.', fontsize=10, ha='left', va='top', color='#E3F2FD', zorder=11)
+
+fig.text(0.71, 0.912, '│', fontsize=12, ha='center', va='top', color='#64B5F6', zorder=11)
+
+fig.text(0.74, 0.912, 'CALCULÓ:', fontsize=10, fontweight='bold', ha='left', va='top', color='white', zorder=11)
+fig.text(0.83, 0.912, 'S&R Ingeniería', fontsize=10, ha='left', va='top', color='#E3F2FD', zorder=11)
+
+fig.text(0.95, 0.912, f'{fecha}', fontsize=9, ha='right', va='top', color='#FFC107',
+         fontweight='bold', zorder=11)
 
 # Extraer datos reales del modelo
 n_nodes_total = len(data_3d) if data_3d_available else len(surface_data)
@@ -435,7 +464,7 @@ ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 # ========================================
 # 3. PERFIL VERTICAL - ASENTAMIENTO EN CENTRO DE ZAPATA
 # ========================================
-ax3 = fig.add_subplot(gs[0, 2])  # Fila 0, columna 2
+ax3 = fig.add_subplot(gs[2, 0])  # Fila 2, columna 0
 
 print("  Calculando perfil vertical de asentamientos...")
 
@@ -669,7 +698,7 @@ ax5.invert_yaxis()
 # ========================================
 # 6. PANEL DE INFORMACIÓN (DERECHA)
 # ========================================
-ax6 = fig.add_subplot(gs[:, 3])  # Toda la columna derecha
+ax6 = fig.add_subplot(gs[:, 2])  # Toda la columna derecha
 ax6.axis('off')
 
 # Calcular estadísticas
