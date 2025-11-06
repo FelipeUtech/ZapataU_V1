@@ -24,15 +24,15 @@ CARGAS:
   Presión contacto: 125.24 kPa
 
 RESULTADOS:
-  Asentamiento máximo: 18.3404 mm
-  Asentamiento mínimo: 8.6877 mm
-  Asentamiento promedio: 12.7663 mm
-  Desviación estándar: 3.4937 mm
-  Diferencial: 9.6527 mm
+  Asentamiento máximo: 27.5106 mm
+  Asentamiento mínimo: 13.0315 mm
+  Asentamiento promedio: 19.1495 mm
+  Desviación estándar: 5.2405 mm
+  Diferencial: 14.4791 mm
   Relación diferencial: 52.63%
 
 VERIFICACIONES:
-  ✓ Asentamiento < 25mm (ACEPTABLE)
+  ⚠ Asentamiento ≥ 25mm (REVISAR)
   ⚠ Diferencial ≥ 10% (REVISAR)
 
 VENTAJAS DEL MODELO 1/4:
