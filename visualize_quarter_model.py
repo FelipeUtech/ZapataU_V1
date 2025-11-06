@@ -232,8 +232,8 @@ ax1.set_xlim(0, Lx_quarter)
 ax1.set_ylim(0, Ly_quarter)
 ax1.set_zlim(-Lz_soil, 1)
 
-# Vista isométrica
-ax1.view_init(elev=25, azim=45)
+# Vista isométrica desde esquina contraria
+ax1.view_init(elev=25, azim=225)
 
 # Texto explicativo
 ax1.text2D(0.02, 0.98, 'ZAPATA 1.5×1.5m\n(naranja)', transform=ax1.transAxes,
@@ -289,27 +289,38 @@ ax2.text(B_quarter/2, L_quarter/2, 'ZAPATA', ha='center', va='center',
          bbox=dict(boxstyle='round', facecolor='black', alpha=0.6))
 
 # ========================================
-# 3. VISTA 3D - ASENTAMIENTOS EN SUPERFICIE
+# 3. VISTA 3D - ASENTAMIENTOS EN SUPERFICIE (HACIA ABAJO)
 # ========================================
 ax3 = fig.add_subplot(2, 2, 3, projection='3d')
 
-# Superficie deformada
-surf = ax3.plot_trisurf(x_surf, y_surf, z_surf, cmap='jet', alpha=0.8, edgecolor='none')
-plt.colorbar(surf, ax=ax3, label='Asentamiento (mm)', shrink=0.6)
+# Invertir asentamientos para mostrar hundimiento (hacia abajo)
+z_surf_inverted = [-z for z in z_surf]  # Negativo = hacia abajo
 
-# Contorno de la zapata en 3D
+# Superficie deformada (hundida)
+surf = ax3.plot_trisurf(x_surf, y_surf, z_surf_inverted, cmap='jet_r', alpha=0.8, edgecolor='none')
+cbar = plt.colorbar(surf, ax=ax3, label='Profundidad de hundimiento (mm)', shrink=0.6)
+
+# Plano de referencia en Z=0 (superficie original)
+xx_ref, yy_ref = np.meshgrid([0, Lx_quarter], [0, Ly_quarter])
+zz_ref = np.zeros_like(xx_ref)
+ax3.plot_surface(xx_ref, yy_ref, zz_ref, alpha=0.2, color='gray', edgecolor='k', linewidth=0.5)
+
+# Contorno de la zapata en 3D (en superficie hundida)
 zapata_outline_x = [0, B_quarter, B_quarter, 0, 0]
 zapata_outline_y = [0, 0, L_quarter, L_quarter, 0]
-zapata_outline_z = [max(z_surf)*1.1] * 5
+zapata_outline_z = [min(z_surf_inverted)*0.9] * 5  # En el nivel hundido
 ax3.plot(zapata_outline_x, zapata_outline_y, zapata_outline_z,
-         'w--', linewidth=3, label='Contorno Zapata')
+         'yellow', linewidth=3, linestyle='--', label='Contorno Zapata')
 
 ax3.set_xlabel('X (m)', fontsize=11, fontweight='bold')
 ax3.set_ylabel('Y (m)', fontsize=11, fontweight='bold')
-ax3.set_zlabel('Asentamiento (mm)', fontsize=11, fontweight='bold')
-ax3.set_title('Vista 3D - Superficie Deformada', fontsize=14, fontweight='bold')
-ax3.view_init(elev=30, azim=45)
+ax3.set_zlabel('Hundimiento (mm)', fontsize=11, fontweight='bold')
+ax3.set_title('Vista 3D - Superficie Hundida (Asentamientos)', fontsize=14, fontweight='bold')
+ax3.view_init(elev=30, azim=225)  # Misma vista que el isométrico
 ax3.legend()
+
+# Invertir eje Z para que negativo esté abajo
+ax3.invert_zaxis()
 
 # ========================================
 # 4. INFORMACIÓN DEL MODELO
