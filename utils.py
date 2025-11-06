@@ -427,9 +427,9 @@ def crear_elementos(nx, ny, nz, nodes_per_layer, mat_tag=1):
 
 
 def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, z_coords,
-                                 zapata, mat_tag_suelo=1, mat_tag_zapata=2):
+                                 zapata, mat_tag_zapata=2, estratos_suelo=None, mat_tag_suelo=1):
     """
-    Crea elementos brick8 diferenciando zapata rígida y suelo.
+    Crea elementos brick8 diferenciando zapata rígida y estratos de suelo.
 
     Parameters:
     -----------
@@ -441,21 +441,39 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
         Coordenadas de nodos
     zapata : dict
         Geometría de zapata {'B', 'L', 'h'}
-    mat_tag_suelo : int
-        Tag del material del suelo
     mat_tag_zapata : int
         Tag del material de la zapata
+    estratos_suelo : list of dict
+        Lista de estratos con 'espesor' y mat_tag. Si None, usa mat_tag_suelo único
+    mat_tag_suelo : int
+        Tag del material del suelo (si estratos_suelo es None)
 
     Returns:
     --------
-    n_elements_suelo : int
-        Número de elementos de suelo creados
+    n_elements_suelo : int (o list)
+        Número de elementos de suelo creados (por estrato si estratos_suelo)
     n_elements_zapata : int
         Número de elementos de zapata creados
     """
     element_counter = 1
-    n_elements_suelo = 0
     n_elements_zapata = 0
+
+    # Calcular límites de estratos (desde superficie z=0 hacia abajo)
+    if estratos_suelo:
+        limites_estratos = []
+        z_acum = 0.0
+        for estrato in estratos_suelo:
+            z_sup = z_acum
+            z_inf = z_acum - estrato['espesor']
+            limites_estratos.append({
+                'z_sup': z_sup,
+                'z_inf': z_inf,
+                'mat_tag': estrato['mat_tag']
+            })
+            z_acum = z_inf
+        n_elements_por_estrato = [0] * len(estratos_suelo)
+    else:
+        n_elements_suelo = 0
 
     h_zapata = zapata['h']
     B_zapata = zapata['B']
@@ -488,14 +506,27 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
                     mat_tag = mat_tag_zapata
                     n_elements_zapata += 1
                 else:
-                    mat_tag = mat_tag_suelo
-                    n_elements_suelo += 1
+                    # Determinar material según estrato (basado en z_elem)
+                    if estratos_suelo:
+                        # Buscar en qué estrato está el elemento
+                        mat_tag = mat_tag_suelo  # default
+                        for idx, limite in enumerate(limites_estratos):
+                            if limite['z_inf'] <= z_elem <= limite['z_sup']:
+                                mat_tag = limite['mat_tag']
+                                n_elements_por_estrato[idx] += 1
+                                break
+                    else:
+                        mat_tag = mat_tag_suelo
+                        n_elements_suelo += 1
 
                 ops.element('stdBrick', element_counter, node1, node2, node3, node4,
                            node5, node6, node7, node8, mat_tag)
                 element_counter += 1
 
-    return n_elements_suelo, n_elements_zapata
+    if estratos_suelo:
+        return n_elements_por_estrato, n_elements_zapata
+    else:
+        return n_elements_suelo, n_elements_zapata
 
 
 # ===================================================================================

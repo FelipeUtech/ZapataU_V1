@@ -76,19 +76,36 @@ MALLA = {
 }
 
 # ===================================================================================
-# PROPIEDADES DE MATERIALES - SUELO
+# PROPIEDADES DE MATERIALES - SUELO (ESTRATOS)
 # ===================================================================================
 
-MATERIAL_SUELO = {
-    'E': 20000.0,               # Módulo de Young (kPa) - típico: 10000-50000
-    'nu': 0.3,                  # Coeficiente de Poisson - típico: 0.25-0.35
-    'rho': 1800.0,              # Densidad (kg/m³) - típico: 1600-2000
+# Definición de estratos de suelo (de superficie hacia profundidad)
+ESTRATOS_SUELO = [
+    {
+        'nombre': 'Estrato 1',
+        'E': 10000.0,           # Módulo de Young (kPa) = 10 MPa
+        'nu': 0.3,              # Coeficiente de Poisson
+        'rho': 1800.0,          # Densidad (kg/m³)
+        'espesor': 3.0,         # Espesor del estrato (m)
+    },
+    {
+        'nombre': 'Estrato 2',
+        'E': 20000.0,           # Módulo de Young (kPa) = 20 MPa
+        'nu': 0.3,              # Coeficiente de Poisson
+        'rho': 1800.0,          # Densidad (kg/m³)
+        'espesor': 10.0,        # Espesor del estrato (m)
+    },
+    {
+        'nombre': 'Estrato 3',
+        'E': 50000.0,           # Módulo de Young (kPa) = 50 MPa
+        'nu': 0.3,              # Coeficiente de Poisson
+        'rho': 1800.0,          # Densidad (kg/m³)
+        'espesor': 7.0,         # Espesor del estrato (m)
+    },
+]
 
-    # Parámetros adicionales para modelos avanzados (no implementado aún)
-    'tipo': 'ElasticIsotropic', # Tipo de material
-    'phi': 30.0,                # Ángulo de fricción (grados) - para futuros modelos
-    'c': 10.0,                  # Cohesión (kPa) - para futuros modelos
-}
+# Para compatibilidad con código existente (usa primer estrato como referencia)
+MATERIAL_SUELO = ESTRATOS_SUELO[0]
 
 # ===================================================================================
 # PROPIEDADES DE MATERIALES - ZAPATA (CONCRETO)
@@ -256,7 +273,13 @@ def imprimir_resumen():
     print(f"  Modelo: {'1/4 con simetría' if DOMINIO['usar_cuarto_modelo'] else 'Completo'}")
 
     print(f"\n🏗️  MATERIALES:")
-    print(f"  Suelo - E: {MATERIAL_SUELO['E']} kPa, ν: {MATERIAL_SUELO['nu']}")
+    print(f"  Suelo - {len(ESTRATOS_SUELO)} estratos:")
+    z_actual = 0
+    for i, estrato in enumerate(ESTRATOS_SUELO, 1):
+        z_sup = z_actual
+        z_inf = z_actual - estrato['espesor']
+        print(f"    {estrato['nombre']}: z={z_sup}m a {z_inf}m, E={estrato['E']/1000:.0f} MPa")
+        z_actual = z_inf
     print(f"  Zapata - E: {MATERIAL_ZAPATA['E']} kPa, ν: {MATERIAL_ZAPATA['nu']}")
 
     print(f"\n⚡ CARGAS:")

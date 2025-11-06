@@ -68,6 +68,7 @@ def main():
     dominio_cfg = config.DOMINIO
     malla_cfg = config.MALLA
     mat_suelo = config.MATERIAL_SUELO
+    estratos_suelo = config.ESTRATOS_SUELO
     mat_zapata = config.MATERIAL_ZAPATA
     cargas = config.CARGAS
     salida = config.SALIDA
@@ -179,25 +180,38 @@ def main():
     # Definir materiales
     print("\nDefiniendo materiales...")
 
-    # Material 1: Suelo
-    ops.nDMaterial('ElasticIsotropic', 1,
-                   mat_suelo['E'], mat_suelo['nu'], mat_suelo['rho'])
-    print(f"✓ Material suelo (tag=1): E={mat_suelo['E']} kPa, ν={mat_suelo['nu']}")
+    # Materiales de estratos de suelo
+    estratos_con_tags = []
+    for i, estrato in enumerate(estratos_suelo, 1):
+        mat_tag = i
+        ops.nDMaterial('ElasticIsotropic', mat_tag,
+                       estrato['E'], estrato['nu'], estrato['rho'])
+        print(f"✓ {estrato['nombre']} (tag={mat_tag}): E={estrato['E']/1000:.0f} MPa, espesor={estrato['espesor']}m")
+        estratos_con_tags.append({
+            'espesor': estrato['espesor'],
+            'mat_tag': mat_tag
+        })
 
-    # Material 2: Concreto (zapata)
-    ops.nDMaterial('ElasticIsotropic', 2,
+    # Material concreto (zapata) - tag después de los estratos
+    mat_tag_zapata = len(estratos_suelo) + 1
+    ops.nDMaterial('ElasticIsotropic', mat_tag_zapata,
                    mat_zapata['E'], mat_zapata['nu'], mat_zapata['rho'])
-    print(f"✓ Material concreto (tag=2): E={mat_zapata['E']} kPa, ν={mat_zapata['nu']}")
+    print(f"✓ Material concreto (tag={mat_tag_zapata}): E={mat_zapata['E']/1e6:.0f} GPa, ν={mat_zapata['nu']}")
 
-    # Crear elementos de suelo y zapata
+    # Crear elementos de suelo (estratificado) y zapata
     print("\nCreando elementos...")
-    n_elements_suelo, n_elements_zapata = utils.crear_elementos_con_zapata(
+    n_elements_por_estrato, n_elements_zapata = utils.crear_elementos_con_zapata(
         nx, ny, nz, nodes_per_layer, x_coords, y_coords, z_coords,
-        zapata_modelo, mat_tag_suelo=1, mat_tag_zapata=2
+        zapata_modelo, mat_tag_zapata=mat_tag_zapata, estratos_suelo=estratos_con_tags
     )
-    print(f"✓ {n_elements_suelo} elementos de suelo creados")
-    print(f"✓ {n_elements_zapata} elementos de zapata rígida creados")
-    print(f"✓ Total: {n_elements_suelo + n_elements_zapata} elementos")
+
+    # Reportar elementos por estrato
+    total_suelo = 0
+    for i, (estrato, n_elem) in enumerate(zip(estratos_suelo, n_elements_por_estrato), 1):
+        print(f"✓ {estrato['nombre']}: {n_elem} elementos")
+        total_suelo += n_elem
+    print(f"✓ Zapata rígida: {n_elements_zapata} elementos")
+    print(f"✓ Total: {total_suelo + n_elements_zapata} elementos")
 
     # -------------------------
     # 5. APLICAR CARGAS
@@ -322,14 +336,18 @@ def main():
 
     # Generar reporte
     if salida['generar_reporte']:
+        # Descripción de estratos para reporte
+        estratos_desc = ', '.join([f"{e['nombre']} (E={e['E']/1000:.0f} MPa, h={e['espesor']}m)"
+                                   for e in estratos_suelo])
+
         datos_modelo = {
             'Zapata': f"{zapata['B']}m × {zapata['L']}m × {zapata['h']}m",
             'Dominio': f"{Lx}m × {Ly}m × {Lz}m",
             'Modelo': 'Cuarto con simetría' if usar_cuarto else 'Completo',
             'Malla': tipo_malla,
-            'Elementos': f"{nx} × {ny} × {nz} = {n_elements_suelo + n_elements_zapata}",
+            'Elementos': f"{nx} × {ny} × {nz} = {total_suelo + n_elements_zapata}",
             'Nodos': len(node_coords),
-            'Material suelo': f"E={mat_suelo['E']} kPa, ν={mat_suelo['nu']}",
+            'Estratos suelo': estratos_desc,
             'Carga total': f"{carga_total:.2f} kN",
             'Presión contacto': f"{presion:.2f} kPa",
         }
