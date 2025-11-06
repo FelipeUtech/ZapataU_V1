@@ -43,7 +43,7 @@ DOMINIO = {
 # ===================================================================================
 
 MALLA = {
-    'tipo': 'refined',          # Opciones: 'uniform', 'refined', 'graded'
+    'tipo': 'graded',           # Opciones: 'uniform', 'refined', 'graded'
                                 # - uniform: malla uniforme en todo el dominio
                                 # - refined: malla refinada en zapata, gruesa afuera
                                 # - graded: transición gradual geométrica (RECOMENDADO)
@@ -66,12 +66,12 @@ MALLA = {
 
     # Parámetros para malla gradual (transición geométrica)
     'graded': {
-        'dx_min': 0.2,          # Tamaño mínimo de elemento (cerca de zapata)
+        'dx_min': 0.4,          # Tamaño mínimo de elemento (cerca de zapata)
         'dx_max': 2.0,          # Tamaño máximo de elemento (bordes)
-        'ratio': 1.15,          # Ratio de crecimiento geométrico (1.1-1.2)
-        'dz_surface': 0.3,      # Tamaño elemento vertical superficial
-        'dz_deep': 1.0,         # Tamaño elemento vertical profundo
-        'depth_transition': 6.0, # Profundidad de transición (m)
+        'ratio': 1.2,           # Ratio de crecimiento geométrico (1.1-1.2)
+        'dz_surface': 0.5,      # Tamaño elemento vertical superficial
+        'dz_deep': 1.5,         # Tamaño elemento vertical profundo
+        'depth_transition': 8.0, # Profundidad de transición (m)
     }
 }
 
