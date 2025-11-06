@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from scipy.interpolate import griddata
+from matplotlib import cm
+from matplotlib.colors import Normalize
 
 # ================================================================================
 # VISUALIZACIÓN ISOMÉTRICA DEL MODELO 1/4 - SIN EXPANDIR
@@ -186,6 +189,25 @@ for i, elem in enumerate(element_nodes[::4]):  # Cada 4 elementos
         zs = [p[2] for p in top_face] + [top_face[0][2]]
         ax1.plot(xs, ys, zs, 'gray', linewidth=0.3, alpha=0.3)
 
+# AGREGAR CONTORNOS DE ASENTAMIENTO EN LA SUPERFICIE
+# Crear grid para contornos
+xi_iso = np.linspace(0, Lx_quarter, 30)
+yi_iso = np.linspace(0, Ly_quarter, 30)
+Xi_iso, Yi_iso = np.meshgrid(xi_iso, yi_iso)
+
+# Interpolar asentamientos
+x_surf_list = [s[0] for s in surface_settlements]
+y_surf_list = [s[1] for s in surface_settlements]
+z_surf_list = [s[3] for s in surface_settlements]  # Asentamientos
+
+Zi_iso = griddata((x_surf_list, y_surf_list), z_surf_list, (Xi_iso, Yi_iso), method='cubic')
+
+# Dibujar superficie de contornos en z=0 (ligeramente elevada para visibilidad)
+surf_contour = ax1.plot_surface(Xi_iso, Yi_iso, np.zeros_like(Xi_iso) + 0.1,
+                                 facecolors=plt.cm.jet(Zi_iso/np.nanmax(Zi_iso)),
+                                 alpha=0.7, rstride=1, cstride=1,
+                                 linewidth=0, antialiased=True, shade=False)
+
 # Dibujar ZAPATA en la esquina
 zapata_z_top = 0
 zapata_z_bottom = -h_zapata
@@ -235,6 +257,13 @@ ax1.set_zlim(-Lz_soil, 1)
 # Vista isométrica desde esquina contraria
 ax1.view_init(elev=25, azim=225)
 
+# Agregar colorbar para los contornos de asentamiento
+norm = Normalize(vmin=np.nanmin(Zi_iso), vmax=np.nanmax(Zi_iso))
+sm = cm.ScalarMappable(cmap=cm.jet, norm=norm)
+sm.set_array([])
+cbar_iso = plt.colorbar(sm, ax=ax1, shrink=0.6, aspect=10, pad=0.1)
+cbar_iso.set_label('Asentamiento (mm)', fontsize=10)
+
 # Texto explicativo
 ax1.text2D(0.02, 0.98, 'ZAPATA 1.5×1.5m\n(naranja)', transform=ax1.transAxes,
            fontsize=10, verticalalignment='top',
@@ -245,6 +274,9 @@ ax1.text2D(0.02, 0.85, 'Plano X=0\n(cian)', transform=ax1.transAxes,
 ax1.text2D(0.02, 0.72, 'Plano Y=0\n(amarillo)', transform=ax1.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.5))
+ax1.text2D(0.02, 0.59, 'Contornos:\nAsentamientos', transform=ax1.transAxes,
+           fontsize=9, verticalalignment='top',
+           bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
 
 # ========================================
 # 2. VISTA SUPERIOR - ASENTAMIENTOS
@@ -260,7 +292,6 @@ xi = np.linspace(0, Lx_quarter, 50)
 yi = np.linspace(0, Ly_quarter, 50)
 Xi, Yi = np.meshgrid(xi, yi)
 
-from scipy.interpolate import griddata
 Zi = griddata((x_surf, y_surf), z_surf, (Xi, Yi), method='cubic')
 
 contour = ax2.contourf(Xi, Yi, Zi, levels=20, cmap='jet')
