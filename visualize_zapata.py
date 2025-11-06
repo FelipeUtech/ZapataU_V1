@@ -38,20 +38,20 @@ print("Cargando datos de asentamientos...")
 # Intentar cargar datos 3D completos primero
 data_3d_available = False
 try:
-    data_3d = pd.read_csv('settlements_3d_graded.csv')
+    data_3d = pd.read_csv('settlements_3d.csv')
     data_3d_available = True
-    print(f"✓ Datos 3D MALLA GRADUAL cargados: {len(data_3d)} puntos")
-    print(f"  Usando datos REALES de OpenSeesPy con malla optimizada")
+    print(f"✓ Datos 3D cargados: {len(data_3d)} puntos")
+    print(f"  Usando datos REALES de OpenSeesPy")
 except FileNotFoundError:
-    print("⚠ No se encontró settlements_3d_graded.csv")
+    print("⚠ No se encontró settlements_3d.csv")
     print("  Usando datos de superficie + aproximación teórica para profundidad")
-    print("  Para obtener datos reales, ejecuta: python zapata_graded_mesh.py")
+    print("  Para obtener datos reales, ejecuta: python run_analysis.py")
     print("  Ver INSTRUCCIONES_3D.md para más detalles\n")
 
 # Cargar datos de superficie
 try:
-    surface_data = pd.read_csv('surface_settlements_graded.csv')
-    print(f"✓ Datos de superficie (malla gradual) cargados: {len(surface_data)} puntos")
+    surface_data = pd.read_csv('surface_settlements.csv')
+    print(f"✓ Datos de superficie cargados: {len(surface_data)} puntos")
 except FileNotFoundError:
     print("⚠ No se encontró surface_settlements_quarter_full.csv")
     print("  Generando datos sintéticos para demostración...")
