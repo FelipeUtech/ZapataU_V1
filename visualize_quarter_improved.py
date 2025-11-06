@@ -119,13 +119,19 @@ fig.suptitle('ANÁLISIS DE ZAPATA - MODELO 1/4 CON SIMETRÍA',
 # ========================================
 ax1 = fig.add_subplot(2, 2, 1, projection='3d')
 
-# Crear grid para interpolación
-xi_iso = np.linspace(0, Lx_quarter, 30)
-yi_iso = np.linspace(0, Ly_quarter, 30)
+# Crear grid de alta resolución para interpolación suave
+xi_iso = np.linspace(0, Lx_quarter, 80)  # Aumentado de 30 a 80 para mayor suavidad
+yi_iso = np.linspace(0, Ly_quarter, 80)
 Xi_iso, Yi_iso = np.meshgrid(xi_iso, yi_iso)
 
-# Interpolar asentamientos
+# Interpolar asentamientos usando todos los puntos disponibles
 Zi_iso = griddata((x_surf, y_surf), z_surf, (Xi_iso, Yi_iso), method='cubic')
+
+# Rellenar NaN si existen usando interpolación lineal
+if np.any(np.isnan(Zi_iso)):
+    mask = np.isnan(Zi_iso)
+    Zi_iso_linear = griddata((x_surf, y_surf), z_surf, (Xi_iso, Yi_iso), method='linear')
+    Zi_iso[mask] = Zi_iso_linear[mask]
 
 # Dibujar contorno del dominio
 domain_corners = [
@@ -164,17 +170,39 @@ def settlement_decay(surface_settlement, depth):
     decay_factor = np.exp(-depth / (B_quarter * 2))
     return surface_settlement * decay_factor
 
-# PLANO X=0
-y_plane_x0 = np.linspace(0, Ly_quarter, 30)
-z_plane_x0 = np.linspace(0, -Lz_soil, 40)
+# PLANO X=0 con alta resolución
+y_plane_x0 = np.linspace(0, Ly_quarter, 60)  # Aumentado para mejor detalle
+z_plane_x0 = np.linspace(0, -Lz_soil, 60)    # Aumentado para mejor detalle
 Y_x0, Z_x0 = np.meshgrid(y_plane_x0, z_plane_x0)
 
-# Interpolar asentamientos en superficie para Y en x=0
+# Interpolar asentamientos en superficie para Y en x=0 usando más puntos
 idx_x0 = np.abs(x_surf - 0) < dx/2
-if np.sum(idx_x0) > 0:
+if np.sum(idx_x0) > 2:  # Necesitamos al menos 3 puntos
     y_surf_x0 = y_surf[idx_x0]
     settlement_surf_x0 = z_surf[idx_x0]
-    settlement_interp_x0 = np.interp(y_plane_x0, y_surf_x0, settlement_surf_x0)
+
+    # Ordenar para interpolación y eliminar duplicados
+    sort_idx = np.argsort(y_surf_x0)
+    y_surf_x0_sorted = y_surf_x0[sort_idx]
+    settlement_surf_x0_sorted = settlement_surf_x0[sort_idx]
+
+    # Eliminar duplicados promediando valores
+    unique_y, indices = np.unique(y_surf_x0_sorted, return_inverse=True)
+    unique_settlement = np.zeros_like(unique_y)
+    for i in range(len(unique_y)):
+        unique_settlement[i] = np.mean(settlement_surf_x0_sorted[indices == i])
+
+    # Interpolación cúbica para superficie más suave
+    from scipy.interpolate import interp1d
+    if len(unique_y) >= 4:
+        interp_func = interp1d(unique_y, unique_settlement,
+                               kind='cubic', fill_value='extrapolate')
+    else:
+        interp_func = interp1d(unique_y, unique_settlement,
+                               kind='linear', fill_value='extrapolate')
+
+    settlement_interp_x0 = interp_func(y_plane_x0)
+    settlement_interp_x0 = np.clip(settlement_interp_x0, 0, None)  # No negativos
 
     Settlement_x0 = np.zeros_like(Y_x0)
     for i in range(len(y_plane_x0)):
@@ -185,19 +213,40 @@ if np.sum(idx_x0) > 0:
     X_x0 = np.zeros_like(Y_x0)
     colors_x0 = cmap_custom(Settlement_x0 / np.nanmax(Zi_iso))
     ax1.plot_surface(X_x0, Y_x0, Z_x0, facecolors=colors_x0,
-                     alpha=0.75, rstride=1, cstride=1,
+                     alpha=0.8, rstride=1, cstride=1,
                      linewidth=0, antialiased=True, shade=True, edgecolor='none')
 
-# PLANO Y=0
-x_plane_y0 = np.linspace(0, Lx_quarter, 30)
-z_plane_y0 = np.linspace(0, -Lz_soil, 40)
+# PLANO Y=0 con alta resolución
+x_plane_y0 = np.linspace(0, Lx_quarter, 60)  # Aumentado para mejor detalle
+z_plane_y0 = np.linspace(0, -Lz_soil, 60)    # Aumentado para mejor detalle
 X_y0, Z_y0 = np.meshgrid(x_plane_y0, z_plane_y0)
 
 idx_y0 = np.abs(y_surf - 0) < dy/2
-if np.sum(idx_y0) > 0:
+if np.sum(idx_y0) > 2:  # Necesitamos al menos 3 puntos
     x_surf_y0 = x_surf[idx_y0]
     settlement_surf_y0 = z_surf[idx_y0]
-    settlement_interp_y0 = np.interp(x_plane_y0, x_surf_y0, settlement_surf_y0)
+
+    # Ordenar para interpolación y eliminar duplicados
+    sort_idx = np.argsort(x_surf_y0)
+    x_surf_y0_sorted = x_surf_y0[sort_idx]
+    settlement_surf_y0_sorted = settlement_surf_y0[sort_idx]
+
+    # Eliminar duplicados promediando valores
+    unique_x, indices = np.unique(x_surf_y0_sorted, return_inverse=True)
+    unique_settlement = np.zeros_like(unique_x)
+    for i in range(len(unique_x)):
+        unique_settlement[i] = np.mean(settlement_surf_y0_sorted[indices == i])
+
+    # Interpolación cúbica para superficie más suave
+    if len(unique_x) >= 4:
+        interp_func = interp1d(unique_x, unique_settlement,
+                               kind='cubic', fill_value='extrapolate')
+    else:
+        interp_func = interp1d(unique_x, unique_settlement,
+                               kind='linear', fill_value='extrapolate')
+
+    settlement_interp_y0 = interp_func(x_plane_y0)
+    settlement_interp_y0 = np.clip(settlement_interp_y0, 0, None)  # No negativos
 
     Settlement_y0 = np.zeros_like(X_y0)
     for i in range(len(x_plane_y0)):
@@ -208,7 +257,7 @@ if np.sum(idx_y0) > 0:
     Y_y0 = np.zeros_like(X_y0)
     colors_y0 = cmap_custom(Settlement_y0 / np.nanmax(Zi_iso))
     ax1.plot_surface(X_y0, Y_y0, Z_y0, facecolors=colors_y0,
-                     alpha=0.75, rstride=1, cstride=1,
+                     alpha=0.8, rstride=1, cstride=1,
                      linewidth=0, antialiased=True, shade=True, edgecolor='none')
 
 # ZAPATA
@@ -278,15 +327,25 @@ ax1.text2D(0.98, 0.98, f'⬇ CARGA\n{P_total_quarter:.1f} kN', transform=ax1.tra
 # ========================================
 ax2 = fig.add_subplot(2, 2, 2)
 
-# Contorno de asentamientos
-xi = np.linspace(0, Lx_quarter, 50)
-yi = np.linspace(0, Ly_quarter, 50)
+# Contorno de asentamientos con alta resolución
+xi = np.linspace(0, Lx_quarter, 80)  # Aumentado para coincidir con isométrico
+yi = np.linspace(0, Ly_quarter, 80)
 Xi, Yi = np.meshgrid(xi, yi)
 Zi = griddata((x_surf, y_surf), z_surf, (Xi, Yi), method='cubic')
 
-contour = ax2.contourf(Xi, Yi, Zi, levels=25, cmap=cmap_custom, extend='both')
-contour_lines = ax2.contour(Xi, Yi, Zi, levels=10, colors='black', linewidths=0.5, alpha=0.3)
-ax2.clabel(contour_lines, inline=True, fontsize=8, fmt='%.2f mm')
+# Rellenar NaN si existen
+if np.any(np.isnan(Zi)):
+    mask = np.isnan(Zi)
+    Zi_linear = griddata((x_surf, y_surf), z_surf, (Xi, Yi), method='linear')
+    Zi[mask] = Zi_linear[mask]
+
+# Contornos rellenos con más niveles para suavidad
+contour = ax2.contourf(Xi, Yi, Zi, levels=30, cmap=cmap_custom, extend='both')
+
+# Líneas de contorno con etiquetas discretas solo en niveles clave
+contour_lines = ax2.contour(Xi, Yi, Zi, levels=8, colors='black', linewidths=0.7, alpha=0.5)
+# Etiquetas de asentamiento solo en las líneas de contorno (discretas)
+ax2.clabel(contour_lines, inline=True, fontsize=7, fmt='%.1f', inline_spacing=15)
 
 cbar2 = plt.colorbar(contour, ax=ax2, label='Asentamiento (mm)', shrink=0.9)
 cbar2.ax.tick_params(labelsize=9)
@@ -313,31 +372,8 @@ ax2.set_aspect('equal')
 ax2.legend(loc='upper right', fontsize=10, framealpha=0.9)
 ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 
-# Anotaciones
-ax2.text(B_quarter/2, L_quarter/2, 'ZAPATA\n1.5×1.5m', ha='center', va='center',
-         color='white', fontweight='bold', fontsize=12,
-         bbox=dict(boxstyle='round,pad=0.5', facecolor='black', alpha=0.7, edgecolor='white', linewidth=2))
-
-# Dimensiones
-ax2.annotate('', xy=(B_quarter, -0.3), xytext=(0, -0.3),
-            arrowprops=dict(arrowstyle='<->', color='red', lw=2))
-ax2.text(B_quarter/2, -0.5, f'{B_quarter} m', ha='center', fontsize=10,
-         fontweight='bold', color='red',
-         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-
-ax2.annotate('', xy=(-0.3, L_quarter), xytext=(-0.3, 0),
-            arrowprops=dict(arrowstyle='<->', color='red', lw=2))
-ax2.text(-0.6, L_quarter/2, f'{L_quarter} m', ha='center', fontsize=10,
-         fontweight='bold', color='red', rotation=90,
-         bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-
-# Máximo asentamiento
-max_idx = np.nanargmax(Zi)
-max_i, max_j = np.unravel_index(max_idx, Zi.shape)
-ax2.plot(Xi[max_i, max_j], Yi[max_i, max_j], 'r*', markersize=20, markeredgecolor='white', markeredgewidth=2)
-ax2.text(Xi[max_i, max_j]+0.3, Yi[max_i, max_j]+0.3, f'Máx: {np.nanmax(Zi):.3f} mm',
-         fontsize=10, fontweight='bold', color='darkred',
-         bbox=dict(boxstyle='round', facecolor='yellow', alpha=0.9))
+# ELIMINADAS todas las etiquetas que tapan la visualización
+# Solo se mantienen las etiquetas de asentamiento en las líneas de contorno (clabel arriba)
 
 # ========================================
 # 3. VISTA 3D - SUPERFICIE HUNDIDA
