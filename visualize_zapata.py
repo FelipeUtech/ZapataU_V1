@@ -150,9 +150,9 @@ fig = plt.figure(figsize=(36, 16), facecolor='white')
 # Usar GridSpec para mejor control - 2 filas × 4 columnas (3 cols gráficos + 1 col info)
 from matplotlib.gridspec import GridSpec
 gs = GridSpec(2, 4, figure=fig,
-              width_ratios=[1.2, 1.2, 0.8, 0.65],  # 3 cols gráficos + 1 col info
+              width_ratios=[1.2, 1.2, 0.8, 0.70],  # 3 cols gráficos + 1 col info (más ancha)
               height_ratios=[1.0, 1.0],  # 2 filas iguales
-              hspace=0.25, wspace=0.28, top=0.90, bottom=0.05, left=0.03, right=0.98)
+              hspace=0.25, wspace=0.28, top=0.90, bottom=0.03, left=0.03, right=0.99)
 
 # ========================================
 # TÍTULO PROFESIONAL SIMPLIFICADO
@@ -751,86 +751,85 @@ from datetime import datetime
 fecha = datetime.now().strftime('%d/%m/%Y')
 
 info_text = f"""
-╔══════════════════════════════════════╗
-║         RÓTULO DEL PROYECTO          ║
-╚══════════════════════════════════════╝
+╔════════════════════════════════════╗
+║      RÓTULO DEL PROYECTO           ║
+╚════════════════════════════════════╝
 
 📋 PROYECTO:
-  Planta de Procesos Porvenir
+   Planta de Procesos Porvenir
 
 🏢 CLIENTE:
-  Hemco Mineros S.A.
+   Hemco Mineros S.A.
 
 ✍️  CALCULÓ:
-  S&R Ingeniería
+   S&R Ingeniería
 
 📅 FECHA:
-  {fecha}
+   {fecha}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-╔══════════════════════════════════════╗
-║   DATOS DEL MODELO                   ║
-╚══════════════════════════════════════╝
+╔════════════════════════════════════╗
+║      DATOS DEL MODELO              ║
+╚════════════════════════════════════╝
 
 📐 GEOMETRÍA:
-  • Dominio: {Lx_quarter:.1f}m × {Ly_quarter:.1f}m × {Lz_soil:.1f}m
-  • Zapata: {B_quarter:.2f}m × {L_quarter:.2f}m × {h_zapata:.2f}m
-  • Modelo: 1/4 con simetría
+   • Dominio: {Lx_quarter:.1f}m × {Ly_quarter:.1f}m × {Lz_soil:.1f}m
+   • Zapata: {B_quarter:.2f}m × {L_quarter:.2f}m × {h_zapata:.2f}m
+   • Modelo: 1/4 con simetría
 
 🔲 MALLA:
-  • Total nodos: {n_nodes_total:,}
-  • Nodos superficie: {n_surface_nodes:,}
-  • Nodos en zapata: {zapata_nodes_count}
-  • Tipo: Gradual adaptativa
+   • Total nodos: {n_nodes_total:,}
+   • Nodos superficie: {n_surface_nodes:,}
+   • Nodos en zapata: {zapata_nodes_count}
+   • Tipo: Gradual adaptativa
 
 🟧 ZAPATA:
-  • E = {E_concrete/1e6:.0f} GPa (concreto)
-  • ν = 0.2
-  • h = {h_zapata:.2f}m
+   • E = {E_concrete/1e6:.0f} GPa (concreto)
+   • ν = 0.2
+   • h = {h_zapata:.2f}m
 
 🌍 SUELO:
-  • Estratificado (ver reporte)
-  • ν = {nu_soil}
-  • ρ = {rho_soil:.0f} kg/m³
+   • Estratificado (ver reporte)
+   • ν = {nu_soil}
+   • ρ = {rho_soil:.0f} kg/m³
 
 🔄 CONDICIONES DE BORDE:
-  • Plano X=0: Simetría
-  • Plano Y=0: Simetría
-  • Base: Empotrada
+   • Plano X=0: Simetría
+   • Plano Y=0: Simetría
+   • Base: Empotrada
 
 🔻 CARGAS:
-  • Total (1/4): {P_total_quarter:.2f} kN
-  • Por nodo: {abs(P_per_node):.2f} kN
-  • Presión: 125.24 kPa
+   • Total (1/4): {P_total_quarter:.2f} kN
+   • Por nodo: {abs(P_per_node):.2f} kN
+   • Presión: 125.24 kPa
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  RESULTADOS DE ASENTAMIENTOS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+╔════════════════════════════════════╗
+║   RESULTADOS DE ASENTAMIENTOS      ║
+╚════════════════════════════════════╝
 
 📊 ESTADÍSTICAS:
-  🔴 Máximo:     {max_settlement:.2f} mm
-  🟢 Mínimo:     {min_settlement:.2f} mm
-  🟡 Promedio:   {avg_settlement:.2f} mm
-  📏 Diferencial: {max_settlement - min_settlement:.2f} mm
-  📊 Desv. Est.:  {std_settlement:.2f} mm
+   🔴 Máximo:     {max_settlement:.2f} mm
+   🟢 Mínimo:     {min_settlement:.2f} mm
+   🟡 Promedio:   {avg_settlement:.2f} mm
+   📏 Diferencial: {max_settlement - min_settlement:.2f} mm
+   📊 Desv. Est.:  {std_settlement:.2f} mm
 
 ⚠️  CRITERIOS:
-  • Límite admisible: 25.0 mm
-  • Estado: {'✅ OK' if max_settlement < 25.0 else '⚠️  REVISAR'}
+   • Límite admisible: 25.0 mm
+   • Estado: {'✅ OK' if max_settlement < 25.0 else '⚠️  REVISAR'}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📝 NOTAS:
-  • Modelo 1/4 con simetría
-  • Análisis elástico lineal
-  • Fundación superficial (Df=0)
+   • Modelo 1/4 con simetría
+   • Análisis elástico lineal
+   • Fundación superficial (Df=0)
 """
 
-ax6.text(0.05, 0.98, info_text, transform=ax6.transAxes,
-         fontsize=8.5, verticalalignment='top', fontfamily='monospace',
-         bbox=dict(boxstyle='round,pad=0.7', facecolor='#FAFAFA', alpha=0.98,
-                   edgecolor='#424242', linewidth=2))
+ax6.text(0.05, 0.99, info_text, transform=ax6.transAxes,
+         fontsize=10.5, verticalalignment='top', fontfamily='monospace',
+         bbox=dict(boxstyle='round,pad=1.0', facecolor='#FAFAFA', alpha=0.98,
+                   edgecolor='#424242', linewidth=3))
 
 # ========================================
 # GUARDAR EN PDF Y PNG
