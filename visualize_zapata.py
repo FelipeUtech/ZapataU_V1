@@ -145,56 +145,35 @@ print("\nGenerando visualización mejorada...")
 plt.style.use('seaborn-v0_8-darkgrid')
 
 # Figura optimizada para PDF
-fig = plt.figure(figsize=(36, 20), facecolor='white')
+fig = plt.figure(figsize=(36, 16), facecolor='white')
 
-# Usar GridSpec para mejor control - 3 filas × 3 columnas gráficos + 1 columna info
+# Usar GridSpec para mejor control - 2 filas × 4 columnas (3 cols gráficos + 1 col info)
 from matplotlib.gridspec import GridSpec
-gs = GridSpec(3, 4, figure=fig,
-              width_ratios=[1.0, 1.0, 0.50, 0.55],  # 3 cols gráficos + 1 col info
-              height_ratios=[1.0, 1.0, 1.2],  # Más altura para fila inferior
-              hspace=0.28, wspace=0.30, top=0.89, bottom=0.04, left=0.03, right=0.98)
+gs = GridSpec(2, 4, figure=fig,
+              width_ratios=[1.2, 1.2, 0.8, 0.65],  # 3 cols gráficos + 1 col info
+              height_ratios=[1.0, 1.0],  # 2 filas iguales
+              hspace=0.25, wspace=0.28, top=0.90, bottom=0.05, left=0.03, right=0.98)
 
 # ========================================
-# TÍTULO PROFESIONAL MEJORADO
+# TÍTULO PROFESIONAL SIMPLIFICADO
 # ========================================
-# Caja azul del encabezado
-title_box = plt.Rectangle((0.03, 0.91), 0.95, 0.08, transform=fig.transFigure,
+# Caja azul del encabezado (más pequeña)
+title_box = plt.Rectangle((0.03, 0.92), 0.95, 0.07, transform=fig.transFigure,
                           facecolor='#0D47A1', edgecolor='#1565C0', linewidth=4,
                           zorder=10, clip_on=False)
 fig.patches.append(title_box)
 
 # Título principal en blanco
-fig.text(0.505, 0.970, 'ANÁLISIS GEOTÉCNICO DE FUNDACIÓN SUPERFICIAL',
-         fontsize=24, fontweight='bold', ha='center', va='top', color='white', zorder=11)
+fig.text(0.505, 0.975, 'ANÁLISIS GEOTÉCNICO DE FUNDACIÓN SUPERFICIAL',
+         fontsize=22, fontweight='bold', ha='center', va='top', color='white', zorder=11)
 
-fig.text(0.505, 0.945, 'MODELO TRIDIMENSIONAL • MÉTODO DE ELEMENTOS FINITOS',
-         fontsize=13, ha='center', va='top', color='#90CAF9',
+fig.text(0.505, 0.950, 'MODELO TRIDIMENSIONAL • MÉTODO DE ELEMENTOS FINITOS',
+         fontsize=12, ha='center', va='top', color='#90CAF9',
          style='italic', fontweight='bold', zorder=11)
 
 # Línea dorada separadora
-fig.add_artist(plt.Line2D([0.05, 0.96], [0.925, 0.925], transform=fig.transFigure,
-                          color='#FFC107', linewidth=3, zorder=11))
-
-# Información del proyecto en tabla organizada
-from datetime import datetime
-fecha = datetime.now().strftime('%d/%m/%Y')
-
-# Primera fila de información
-fig.text(0.06, 0.912, 'PROYECTO:', fontsize=10, fontweight='bold', ha='left', va='top', color='white', zorder=11)
-fig.text(0.17, 0.912, 'Planta de Procesos Porvenir', fontsize=10, ha='left', va='top', color='#E3F2FD', zorder=11)
-
-fig.text(0.42, 0.912, '│', fontsize=12, ha='center', va='top', color='#64B5F6', zorder=11)
-
-fig.text(0.45, 0.912, 'CLIENTE:', fontsize=10, fontweight='bold', ha='left', va='top', color='white', zorder=11)
-fig.text(0.54, 0.912, 'Hemco Mineros S.A.', fontsize=10, ha='left', va='top', color='#E3F2FD', zorder=11)
-
-fig.text(0.71, 0.912, '│', fontsize=12, ha='center', va='top', color='#64B5F6', zorder=11)
-
-fig.text(0.74, 0.912, 'CALCULÓ:', fontsize=10, fontweight='bold', ha='left', va='top', color='white', zorder=11)
-fig.text(0.83, 0.912, 'S&R Ingeniería', fontsize=10, ha='left', va='top', color='#E3F2FD', zorder=11)
-
-fig.text(0.95, 0.912, f'{fecha}', fontsize=9, ha='right', va='top', color='#FFC107',
-         fontweight='bold', zorder=11)
+fig.add_artist(plt.Line2D([0.05, 0.96], [0.930, 0.930], transform=fig.transFigure,
+                          color='#FFC107', linewidth=2, zorder=11))
 
 # Extraer datos reales del modelo
 n_nodes_total = len(data_3d) if data_3d_available else len(surface_data)
@@ -464,9 +443,9 @@ ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 # Solo se mantienen las etiquetas de asentamiento en las líneas de contorno (clabel arriba)
 
 # ========================================
-# 3. PERFIL VERTICAL - ASENTAMIENTO EN CENTRO DE ZAPATA (VERTICALIDAD MEJORADA)
+# 3. PERFIL VERTICAL - ASENTAMIENTO EN CENTRO DE ZAPATA
 # ========================================
-ax3 = fig.add_subplot(gs[:, 2])  # Toda la columna 2 para máxima verticalidad
+ax3 = fig.add_subplot(gs[0, 2])  # Fila 0, columna 2
 
 print("  Calculando perfil vertical de asentamientos...")
 
@@ -552,18 +531,15 @@ ax3.annotate(f'{settlement_surface_center:.2f} mm',
              bbox=dict(boxstyle='round,pad=0.4', facecolor='yellow', alpha=0.8),
              arrowprops=dict(arrowstyle='->', color='darkred', lw=1.5))
 
-# Configuración de ejes con mejor verticalidad
-ax3.set_xlabel('Asentamiento (mm)', fontsize=13, fontweight='bold')
-ax3.set_ylabel('Profundidad Z (m)', fontsize=13, fontweight='bold')
-ax3.set_title('Perfil Vertical - Centro de Zapata (x=0, y=0)', fontsize=14, fontweight='bold', pad=20)
+# Configuración de ejes
+ax3.set_xlabel('Asentamiento (mm)', fontsize=11, fontweight='bold')
+ax3.set_ylabel('Profundidad Z (m)', fontsize=11, fontweight='bold')
+ax3.set_title('Perfil Vertical\nCentro de Zapata', fontsize=12, fontweight='bold', pad=12)
 ax3.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
-ax3.legend(loc='lower right', fontsize=11, framealpha=0.9)
+ax3.legend(loc='lower right', fontsize=9, framealpha=0.9)
 
 # Invertir eje Y para que profundidad positiva vaya hacia abajo visualmente
 ax3.set_ylim(-Lz_soil, 1)
-
-# Ajustar aspecto para mayor verticalidad (relación altura/ancho)
-ax3.set_aspect('auto')  # Permite que el subplot use toda la altura disponible
 
 # Añadir zona de influencia
 influence_depth = -B_quarter * 3.0
@@ -703,7 +679,7 @@ ax5.invert_yaxis()
 # ========================================
 # 6. ESTRATIGRAFÍA DEL SUELO
 # ========================================
-ax_strata = fig.add_subplot(gs[2, 0])
+ax_strata = fig.add_subplot(gs[1, 2])  # Fila 1, columna 2 (alineado con perfil vertical)
 
 # Leer datos de estratos desde config
 estratos = None
@@ -747,8 +723,8 @@ try:
 
     ax_strata.set_xlim(0, 1)
     ax_strata.set_ylim(-Lz_soil, 1)
-    ax_strata.set_ylabel('Profundidad Z (m)', fontsize=13, fontweight='bold')
-    ax_strata.set_title('Perfil Estratigráfico', fontsize=14, fontweight='bold', pad=15)
+    ax_strata.set_ylabel('Profundidad Z (m)', fontsize=11, fontweight='bold')
+    ax_strata.set_title('Perfil Estratigráfico', fontsize=12, fontweight='bold', pad=12)
     ax_strata.set_xticks([])
     ax_strata.grid(True, alpha=0.3, axis='y')
 
@@ -759,67 +735,7 @@ except Exception as e:
     ax_strata.axis('off')
 
 # ========================================
-# 7. TABLA DE RESULTADOS CLAVE
-# ========================================
-ax_results = fig.add_subplot(gs[2, 1])
-ax_results.axis('off')
-
-# Calcular estadísticas de asentamiento
-max_settlement = np.max(z_surf)
-min_settlement = np.min(z_surf)
-avg_settlement = np.mean(z_surf)
-avg_settlement_zapata = np.mean(z_surf[(x_surf <= B_quarter) & (y_surf <= L_quarter)])
-
-# Crear tabla de resultados
-results_table_text = f"""
-╔═══════════════════════════════════════╗
-║    RESULTADOS PRINCIPALES             ║
-╚═══════════════════════════════════════╝
-
-📌 ASENTAMIENTOS:
-───────────────────────────────────────
-  Máximo absoluto:    {max_settlement:.2f} mm
-
-  Promedio en zapata: {avg_settlement_zapata:.2f} mm
-
-  Diferencial máx:    {max_settlement - min_settlement:.2f} mm
-
-⚖️  CRITERIOS DE ACEPTACIÓN:
-───────────────────────────────────────
-  Límite admisible:   25.0 mm
-
-  Estado actual:      {'✅ CUMPLE' if max_settlement < 25.0 else '❌ NO CUMPLE'}
-
-  Margen:             {25.0 - max_settlement:.2f} mm
-
-  Factor seguridad:   {25.0 / max_settlement:.2f}
-
-📐 MODELO NUMÉRICO:
-───────────────────────────────────────
-  Elementos totales:  {n_nodes_total:,}
-
-  Nodos superficie:   {n_surface_nodes:,}
-
-  Tipo malla:         Gradual refinada
-
-  Convergencia:       4.2% (Buena)
-
-🌍 CONFIGURACIÓN SUELO:
-───────────────────────────────────────
-  Estratos:           {len(estratos) if estratos is not None else 'N/A'}
-
-  Módulos E:          5-50 MPa
-
-  Modelo:             Elástico lineal
-"""
-
-ax_results.text(0.05, 0.98, results_table_text, transform=ax_results.transAxes,
-               fontsize=10, verticalalignment='top', fontfamily='monospace',
-               bbox=dict(boxstyle='round,pad=0.8', facecolor='#F0F8FF', alpha=0.98,
-                        edgecolor='#1565C0', linewidth=2))
-
-# ========================================
-# 8. PANEL DE INFORMACIÓN (ÚLTIMA COLUMNA DERECHA)
+# 7. PANEL DE INFORMACIÓN (ÚLTIMA COLUMNA DERECHA)
 # ========================================
 ax6 = fig.add_subplot(gs[:, 3])  # Toda la columna 3 (última columna)
 ax6.axis('off')
@@ -830,8 +746,29 @@ min_settlement = np.min(z_surf)
 avg_settlement = np.mean(z_surf)
 std_settlement = np.std(z_surf)
 
-# Información del modelo con datos reales
+# Información del modelo con datos reales y rótulo del proyecto
+from datetime import datetime
+fecha = datetime.now().strftime('%d/%m/%Y')
+
 info_text = f"""
+╔══════════════════════════════════════╗
+║         RÓTULO DEL PROYECTO          ║
+╚══════════════════════════════════════╝
+
+📋 PROYECTO:
+  Planta de Procesos Porvenir
+
+🏢 CLIENTE:
+  Hemco Mineros S.A.
+
+✍️  CALCULÓ:
+  S&R Ingeniería
+
+📅 FECHA:
+  {fecha}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 ╔══════════════════════════════════════╗
 ║   DATOS DEL MODELO                   ║
 ╚══════════════════════════════════════╝
@@ -891,8 +828,8 @@ info_text = f"""
 """
 
 ax6.text(0.05, 0.98, info_text, transform=ax6.transAxes,
-         fontsize=9.5, verticalalignment='top', fontfamily='monospace',
-         bbox=dict(boxstyle='round,pad=0.8', facecolor='#FAFAFA', alpha=0.98,
+         fontsize=8.5, verticalalignment='top', fontfamily='monospace',
+         bbox=dict(boxstyle='round,pad=0.7', facecolor='#FAFAFA', alpha=0.98,
                    edgecolor='#424242', linewidth=2))
 
 # ========================================
