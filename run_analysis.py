@@ -327,7 +327,7 @@ def main():
             'Dominio': f"{Lx}m × {Ly}m × {Lz}m",
             'Modelo': 'Cuarto con simetría' if usar_cuarto else 'Completo',
             'Malla': tipo_malla,
-            'Elementos': f"{nx} × {ny} × {nz} = {n_elements}",
+            'Elementos': f"{nx} × {ny} × {nz} = {n_elements_suelo + n_elements_zapata}",
             'Nodos': len(node_coords),
             'Material suelo': f"E={mat_suelo['E']} kPa, ν={mat_suelo['nu']}",
             'Carga total': f"{carga_total:.2f} kN",
@@ -353,15 +353,20 @@ def main():
         print("PASO 9: GENERANDO VISUALIZACIONES")
         print("="*80)
 
-        # Vista isométrica del modelo
-        if salida['vista_isometrica']:
-            archivo = f"{salida['nombre_modelo']}_isometric.{salida['formato_imagen']}"
-            utils.plot_3d_model(x_coords, y_coords, z_coords, zapata_modelo, archivo)
-
-        # Mapa de asentamientos
-        if salida['mapa_asentamientos']:
-            archivo = f"{salida['nombre_modelo']}_settlements.{salida['formato_imagen']}"
-            utils.plot_surface_settlements(df_surface, zapata_modelo, archivo)
+        # Ejecutar visualizador definitivo
+        print("\nEjecutando visualizador completo...")
+        try:
+            import subprocess
+            result = subprocess.run(['python', 'visualize_zapata.py'],
+                                  capture_output=True, text=True, timeout=60)
+            if result.returncode == 0:
+                print("✓ Visualización completa generada: modelo_quarter_isometrico_graded.png")
+            else:
+                print("⚠️  Error al generar visualización completa")
+                if result.stderr:
+                    print(f"   {result.stderr[:200]}")
+        except Exception as e:
+            print(f"⚠️  No se pudo ejecutar visualize_zapata.py: {e}")
 
     # -------------------------
     # 10. RESUMEN FINAL
@@ -377,10 +382,7 @@ def main():
     if salida['generar_reporte']:
         print(f"  • {salida['nombre_reporte']}")
     if salida['generar_graficas']:
-        if salida['vista_isometrica']:
-            print(f"  • {salida['nombre_modelo']}_isometric.{salida['formato_imagen']}")
-        if salida['mapa_asentamientos']:
-            print(f"  • {salida['nombre_modelo']}_settlements.{salida['formato_imagen']}")
+        print(f"  • modelo_quarter_isometrico_graded.png (visualización completa)")
 
     print("\n" + "="*80 + "\n")
 
