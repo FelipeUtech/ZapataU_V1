@@ -75,9 +75,10 @@ except FileNotFoundError:
 # -------------------------
 # PARÁMETROS DEL MODELO
 # -------------------------
-# DOMINIO AMPLIADO: 40m × 40m completo (20m × 20m en modelo 1/4)
-Lx_quarter = 20.0  # Ampliado de 10.0 a 20.0m
-Ly_quarter = 20.0  # Ampliado de 10.0 a 20.0m
+# DOMINIO OPTIMIZADO: 30m × 30m completo (15m × 15m en modelo 1/4)
+# 5× ancho zapata = 5 × 3m = 15m desde centro
+Lx_quarter = 15.0  # Modelo 1/4: 15m
+Ly_quarter = 15.0  # Modelo 1/4: 15m
 Lz_soil = 20.0
 B_quarter = 1.5
 L_quarter = 1.5
@@ -86,8 +87,8 @@ P_total_quarter = 1127.14 / 4.0
 E_soil = 20000.0  # kPa (20 MPa)
 nu_soil = 0.3
 rho_soil = 1800.0
-nx = 20  # Aumentado de 10 a 20
-ny = 20  # Aumentado de 10 a 20
+nx = 15  # 15 elementos en x (dx = 1m)
+ny = 15  # 15 elementos en y (dy = 1m)
 nz = 15
 dx = Lx_quarter / nx
 dy = Ly_quarter / ny
@@ -321,6 +322,8 @@ ax1.set_xlim(0, Lx_quarter)
 ax1.set_ylim(0, Ly_quarter)
 ax1.set_zlim(-Lz_soil, 1)
 ax1.view_init(elev=25, azim=225)
+# Mantener escala igual en todos los ejes para evitar distorsión
+ax1.set_box_aspect([Lx_quarter, Ly_quarter, Lz_soil])
 
 # Colorbar
 norm = Normalize(vmin=np.nanmin(Zi_iso), vmax=np.nanmax(Zi_iso))
@@ -554,6 +557,8 @@ ax4.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
 ax4.set_zlabel('Hundimiento (mm)', fontsize=12, fontweight='bold')
 ax4.set_title('Vista 3D - Superficie Hundida (Asentamientos)', fontsize=15, fontweight='bold', pad=15)
 ax4.view_init(elev=30, azim=225)
+# Mantener escala igual en todos los ejes para evitar distorsión
+ax4.set_box_aspect([Lx_quarter, Ly_quarter, max(abs(z_surf_inverted))])
 ax4.legend(fontsize=10, loc='upper left')
 ax4.invert_zaxis()
 ax4.grid(True, alpha=0.3, linestyle='--')
