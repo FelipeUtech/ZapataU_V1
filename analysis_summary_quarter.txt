@@ -1,0 +1,43 @@
+======================================================================
+ANÁLISIS OPTIMIZADO DE ZAPATA - MODELO 1/4 CON SIMETRÍA
+======================================================================
+
+Fecha: 2025-11-06
+
+EFICIENCIA COMPUTACIONAL:
+  Nodos en modelo 1/4: 1936
+  Equivalente modelo completo: 7744 nodos
+  Reducción: 75.0%
+  Tiempo de análisis: ~25% del modelo completo
+
+MODELO COMPLETO EQUIVALENTE:
+  Dominio: 20m × 20m × 20m
+  Zapata: 3m × 3m × 0.6m
+  Malla: 20 × 20 × 15 elementos
+
+CONDICIONES DE SIMETRÍA:
+  Plano x=0: restricción desplazamiento en x
+  Plano y=0: restricción desplazamiento en y
+
+CARGAS:
+  Carga total (completo): 1127.14 kN
+  Presión contacto: 125.24 kPa
+
+RESULTADOS:
+  Asentamiento máximo: 27.5106 mm
+  Asentamiento mínimo: 13.0315 mm
+  Asentamiento promedio: 19.1495 mm
+  Desviación estándar: 5.2405 mm
+  Diferencial: 14.4791 mm
+  Relación diferencial: 52.63%
+
+VERIFICACIONES:
+  ⚠ Asentamiento ≥ 25mm (REVISAR)
+  ⚠ Diferencial ≥ 10% (REVISAR)
+
+VENTAJAS DEL MODELO 1/4:
+  • Reducción de nodos: ~75%
+  • Reducción de tiempo: ~75%
+  • Reducción de memoria: ~75%
+  • Resultados equivalentes al modelo completo
+  • Permite mallas más finas con mismo costo
