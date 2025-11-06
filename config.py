@@ -83,7 +83,7 @@ MALLA = {
 ESTRATOS_SUELO = [
     {
         'nombre': 'Estrato 1',
-        'E': 10000.0,           # Módulo de Young (kPa) = 10 MPa
+        'E': 5000.0,            # Módulo de Young (kPa) = 5 MPa
         'nu': 0.3,              # Coeficiente de Poisson
         'rho': 1800.0,          # Densidad (kg/m³)
         'espesor': 3.0,         # Espesor del estrato (m)
