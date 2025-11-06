@@ -143,7 +143,7 @@ cmap_custom = LinearSegmentedColormap.from_list('settlement', colors_custom, N=n
 print("\nGenerando visualización mejorada...")
 
 plt.style.use('seaborn-v0_8-darkgrid')
-fig = plt.figure(figsize=(24, 20), facecolor='white')  # Ajustado para 3 filas x 3 columnas
+fig = plt.figure(figsize=(24, 16), facecolor='white')  # Reducido de 20 a 16 para eliminar espacio sobrante
 fig.suptitle('ANÁLISIS DE ZAPATA - MALLA GRADUAL OPTIMIZADA (6B-20m)',
              fontsize=18, fontweight='bold', y=0.98)
 
@@ -641,6 +641,8 @@ ax5.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 ax5.legend(loc='upper right', fontsize=10, framealpha=0.9)
 ax5.set_xlim(0, Lx_quarter)
 ax5.set_ylim(0, max(z_surf) * 1.1)
+# Invertir eje Y para que el asentamiento se muestre hacia abajo
+ax5.invert_yaxis()
 
 # ========================================
 # 6. INFORMACIÓN DEL MODELO
@@ -652,9 +654,6 @@ max_settlement = np.max(z_surf)
 min_settlement = np.min(z_surf)
 avg_settlement = np.mean(z_surf)
 std_settlement = np.std(z_surf)
-
-allowable_settlement = 25.0
-fs_settlement = allowable_settlement / max_settlement if max_settlement > 0 else 0
 
 info_text = f"""
 ╔═══════════════════════════════════════════════╗
@@ -689,21 +688,6 @@ info_text = f"""
   • Densidad: {rho_soil:.0f} kg/m³
   • Tipo: Suelo medio-denso
 
-📊 MODELO COMPLETO EQUIVALENTE:
-  • B = {B}m, 6B = {6*B}m
-  • Dominio total: {6*B}m × {6*B}m × {Lz_soil}m
-  • Zapata completa: {B}m × {B}m × {h_zapata}m
-  • Malla refinada adaptativa automática
-
-⚡ VENTAJAS MALLA GRADUAL OPTIMIZADA:
-  ✓ 62% menos nodos (6,069 vs 15,972)
-  ✓ 60× más rápido (~10 seg vs ~10 min)
-  ✓ Transición suave (mejor aspect ratio)
-  ✓ Refinada donde se necesita
-  ✓ Elementos grandes en bordes
-  ✓ Dominio 6B: bordes ≈0 asentamiento
-  ✓ Df=0 corregido: base en superficie
-
 🔻 CARGAS APLICADAS:
   • Carga total zapata: 1127.14 kN
   • Carga en 1/4: {P_total_quarter:.2f} kN
@@ -717,25 +701,20 @@ info_text = f"""
   📊 Desv. Estándar: {std_settlement:.4f} mm
   📏 Diferencial: {max_settlement - min_settlement:.4f} mm
 
-🛡️ EVALUACIÓN DE SEGURIDAD:
-  • Límite permitido: {allowable_settlement:.1f} mm
-  • Factor de seguridad: {fs_settlement:.2f}
-  • Estado: {"✅ ACEPTABLE" if fs_settlement > 1.5 else "⚠️ REVISAR" if fs_settlement > 1.0 else "❌ CRÍTICO"}
-
 📝 NOTA: Visualización del cuadrante 1/4.
    El modelo completo se obtiene por reflexión.
 """
 
-ax6.text(0.03, 0.97, info_text, transform=ax6.transAxes,
-         fontsize=8.5, verticalalignment='top', fontfamily='monospace',
-         bbox=dict(boxstyle='round,pad=0.8', facecolor='#E8F4F8', alpha=0.95,
+ax6.text(0.03, 0.98, info_text, transform=ax6.transAxes,
+         fontsize=9.0, verticalalignment='top', fontfamily='monospace',
+         bbox=dict(boxstyle='round,pad=0.7', facecolor='#E8F4F8', alpha=0.95,
                    edgecolor='#1E88E5', linewidth=2))
 
 # ========================================
 # GUARDAR
 # ========================================
-plt.tight_layout(pad=2.0)
-plt.subplots_adjust(top=0.96, wspace=0.25, hspace=0.25)
+plt.tight_layout(pad=1.5)
+plt.subplots_adjust(top=0.96, bottom=0.05, wspace=0.20, hspace=0.30)
 
 output_file = 'modelo_quarter_isometrico_graded.png'
 plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
@@ -772,5 +751,4 @@ print(f"✅ Profundidad = {Lz_soil}m")
 print(f"✅ Zapata rígida: E = 250 GPa (10× más rígida), Df = 0m")
 print(f"✅ Total nodos: 6,069 (62% menos que malla uniforme)")
 print(f"✅ Tiempo análisis: ~10 seg (60× más rápido)")
-print(f"✅ Asentamiento máximo: {max_settlement:.4f} mm")
-print(f"✅ Factor de seguridad: {fs_settlement:.2f}\n")
+print(f"✅ Asentamiento máximo: {max_settlement:.4f} mm\n")
