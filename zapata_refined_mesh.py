@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """
 Modelo 1/4 de Zapata con Malla Refinada AUTOMATIZADA
-- Dominio: 3B (automático en función de B)
+- Dominio: 6B (automático en función de B)
+- Profundidad: 20m
 - Malla refinada en zapata: 0.25m × 0.25m
-- Malla exterior hasta 3B: 0.5m × 0.5m
-- Malla profundidad > 3B: 1.0m × 1.0m
+- Malla exterior: 0.5m × 0.5m
+- Malla profundidad < 10m: 0.5m
+- Malla profundidad > 10m: 1.0m
 - Zapata 10× más rígida
-- Df = 0 (zapata superficial)
+- Df = 0 (BASE de zapata en superficie z=0)
 """
 
 import openseespy.opensees as ops
@@ -28,19 +30,19 @@ Df = 0.0             # Profundidad de fundación (superficial)
 
 # Cálculos automáticos basados en B
 zapata_quarter = B / 2.0           # Zapata en modelo 1/4
-dominio_quarter = 3 * B / 2.0      # Dominio 3B en modelo 1/4: (3B)/2
-Lz_soil_shallow = 3 * B            # Profundidad hasta 3B (malla fina)
-Lz_soil_deep = 4 * B               # Profundidad total (hasta 4B)
+dominio_quarter = 6 * B / 2.0      # Dominio 6B en modelo 1/4: (6B)/2 = 3B
+Lz_soil_shallow = 10.0             # Profundidad hasta 10m (malla fina)
+Lz_soil_deep = 20.0                # Profundidad total 20m
 
 print("\n" + "="*80)
-print("MODELO 1/4 CON MALLA REFINADA AUTOMATIZADA - DOMINIO 3B")
+print("MODELO 1/4 CON MALLA REFINADA AUTOMATIZADA - DOMINIO 6B")
 print("="*80)
 print(f"\n📐 GEOMETRÍA (automatizada en función de B={B}m):")
 print(f"  Zapata completa: {B}m × {B}m × {h_zapata}m")
-print(f"  Dominio completo: {3*B}m × {3*B}m × {Lz_soil_deep}m (3B horizontal, 4B profundidad)")
+print(f"  Dominio completo: {6*B}m × {6*B}m × {Lz_soil_deep}m (6B horizontal, 20m profundidad)")
 print(f"  Modelo 1/4: {dominio_quarter}m × {dominio_quarter}m × {Lz_soil_deep}m")
 print(f"  Zapata 1/4: {zapata_quarter}m × {zapata_quarter}m")
-print(f"  Df: {Df}m (superficial)")
+print(f"  Df: {Df}m (base zapata en superficie)")
 
 # ================================================================================
 # MALLA NO UNIFORME AUTOMATIZADA
@@ -69,17 +71,26 @@ print(f"    - Zona exterior ({zapata_quarter}m a {dominio_quarter}m): dx = {dx_e
 print(f"    - Total nodos X/Y: {len(x_coords)}")
 
 # Coordenadas Z: variable
-# Zona superficial: 0 a -3B con dz_shallow
+# IMPORTANTE: Con Df=0, z=0 es la BASE de la zapata (superficie del suelo)
+# La zapata va de z=0 (base) a z=h_zapata (tope)
+# El suelo va de z=0 (superficie) hacia abajo (z<0)
+
+# Primero crear nodos de zapata (encima de z=0)
+z_zapata = np.arange(h_zapata, -0.01, -dz_shallow)  # Desde tope zapata hasta base
+# Zona superficial del suelo: 0 a -10m con dz_shallow
 z_shallow = np.arange(0, -Lz_soil_shallow - 0.01, -dz_shallow)
-# Zona profunda: -3B a -4B con dz_deep
+# Zona profunda: -10m a -20m con dz_deep
 z_start_deep = -Lz_soil_shallow - dz_deep
 z_deep = np.arange(z_start_deep, -Lz_soil_deep - 0.01, -dz_deep)
-# Combinar
-z_coords = np.concatenate([z_shallow, z_deep])
+# Combinar TODO: zapata + suelo superficial + suelo profundo
+z_coords = np.concatenate([z_zapata, z_shallow, z_deep])
+# Eliminar duplicados y ordenar de mayor a menor
+z_coords = np.unique(z_coords)[::-1]
 
 print(f"  Malla vertical:")
-print(f"    - Zona superficial (0 a -{Lz_soil_shallow}m = -3B): dz = {dz_shallow}m → {len(z_shallow)} niveles")
-print(f"    - Zona profunda (-{Lz_soil_shallow}m a -{Lz_soil_deep}m): dz = {dz_deep}m → {len(z_deep)} niveles")
+print(f"    - Zapata ({h_zapata}m a 0m): dz = {dz_shallow}m → {len(z_zapata)} niveles")
+print(f"    - Suelo superficial (0 a -{Lz_soil_shallow}m): dz = {dz_shallow}m → {len(z_shallow)} niveles")
+print(f"    - Suelo profundo (-{Lz_soil_shallow}m a -{Lz_soil_deep}m): dz = {dz_deep}m → {len(z_deep)} niveles")
 print(f"    - Total niveles Z: {len(z_coords)}")
 
 # ================================================================================
@@ -102,10 +113,10 @@ for k, z in enumerate(z_coords):
             ops.node(nodeCounter, x, y, z)
             nodeCoord[nodeCounter] = (x, y, z)
 
-            # Superficie
-            if k == 0:
+            # Superficie (z=0, base de zapata / superficie de suelo)
+            if abs(z - 0.0) < 0.001:
                 surface_nodes.append(nodeCounter)
-                # Nodos bajo zapata
+                # Nodos bajo zapata (donde se aplica la carga)
                 if x <= zapata_quarter and y <= zapata_quarter:
                     zapata_nodes.append(nodeCounter)
 
@@ -209,9 +220,9 @@ for k in range(nz):
             node8 = node4 + nodesPerLayer
 
             # Determinar material
-            # Zapata si: z >= -(Df+h_zapata) Y x <= zapata_quarter Y y <= zapata_quarter
-            # Con Df=0: zapata de z=0 a z=-h_zapata
-            if z_elem >= -(Df + h_zapata) and x_elem <= zapata_quarter and y_elem <= zapata_quarter:
+            # Con Df=0: zapata va de z=0 (base en superficie) a z=h_zapata (tope)
+            # Zapata si: z > 0 Y z <= h_zapata Y x <= zapata_quarter Y y <= zapata_quarter
+            if z_elem > 0 and z_elem <= h_zapata and x_elem <= zapata_quarter and y_elem <= zapata_quarter:
                 matTag = 2  # Concreto
             else:
                 matTag = 1  # Suelo

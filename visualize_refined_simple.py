@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Visualización Simple del Modelo Refinado
-4 paneles: Scatter + Malla, Contornos, Perfiles, Info
+Visualización Simple del Modelo Refinado 6B - 20m
+4 paneles: Scatter + Malla, Contornos, Perfiles (INVERTIDO), Info
+Eje Y invertido: hundimientos hacia abajo
 """
 
 import numpy as np
@@ -24,9 +25,9 @@ print(f"✓ Datos cargados: {len(surface_data)} puntos superficie, {len(data_3d)
 
 # Parámetros del modelo (automatizados en función de B)
 B = 3.0
-Lx_quarter = 4.5
-Ly_quarter = 4.5
-Lz_soil = 12.0
+Lx_quarter = 9.0  # 6B/2 = 3B = 9m
+Ly_quarter = 9.0
+Lz_soil = 20.0  # Profundidad 20m
 B_quarter = 1.5
 h_zapata = 0.6
 E_soil = 20000.0  # kPa
@@ -50,7 +51,7 @@ differential = zapata_max - zapata_min
 
 # Crear figura
 fig = plt.figure(figsize=(16, 12), facecolor='white')
-fig.suptitle(f'Análisis con Malla Refinada y Zapata Rígida (E={E_concrete/1e6:.0f} GPa)',
+fig.suptitle(f'Análisis 6B-20m con Zapata Rígida (E={E_concrete/1e6:.0f} GPa) - Df=0 ✓',
              fontsize=16, fontweight='bold', y=0.98)
 
 # ==================== PANEL 1: Scatter con malla ====================
@@ -81,7 +82,7 @@ ax1.add_patch(border_rect)
 
 ax1.set_xlabel('X (m)', fontsize=11, fontweight='bold')
 ax1.set_ylabel('Y (m)', fontsize=11, fontweight='bold')
-ax1.set_title(f'Malla Refinada - Dominio 3B ({Lx_quarter*2}m × {Ly_quarter*2}m)',
+ax1.set_title(f'Malla Refinada - Dominio 6B ({Lx_quarter*2}m × {Ly_quarter*2}m)',
              fontsize=12, fontweight='bold')
 ax1.set_aspect('equal')
 ax1.grid(False)
@@ -165,6 +166,8 @@ ax3.set_title('Perfiles de Asentamiento', fontsize=12, fontweight='bold')
 ax3.legend(loc='best', fontsize=10, framealpha=0.9)
 ax3.grid(True, alpha=0.3, linestyle='--')
 ax3.set_xlim(0, Lx_quarter)
+# INVERTIR EJE Y: hundimientos hacia abajo
+ax3.invert_yaxis()
 
 # ==================== PANEL 4: Información ====================
 ax4 = fig.add_subplot(2, 2, 4)
@@ -172,21 +175,21 @@ ax4.axis('off')
 
 info_text = f"""
 {'='*50}
-MODELO REFINADO - MALLA ADAPTATIVA 3B
+MODELO REFINADO - MALLA ADAPTATIVA 6B
 {'='*50}
 
 GEOMETRÍA:
   Zapata completa: {B}m × {B}m × {h_zapata}m
-  Dominio completo: {3*B}m × {3*B}m = 3B
+  Dominio completo: {6*B}m × {6*B}m = 6B
   Modelo 1/4: {Lx_quarter}m × {Ly_quarter}m
-  Profundidad: {Lz_soil}m = 4B
-  Df: 0m (superficial)
+  Profundidad: {Lz_soil}m
+  Df: 0m (BASE zapata en superficie z=0) ✓
 
 MALLA NO UNIFORME:
   Zona zapata (0-{B_quarter}m): dx = 0.25m (refinada)
   Zona exterior ({B_quarter}m-{Lx_quarter}m): dx = 0.5m
-  Zona superficial (0 a -3B): dz = 0.5m
-  Zona profunda (>3B): dz = 1.0m
+  Zona superficial (0 a -10m): dz = 0.5m
+  Zona profunda (>10m): dz = 1.0m
   Total nodos superficie: {len(surface_data)}
 
 MATERIALES:
@@ -200,22 +203,22 @@ RESULTADOS ZAPATA (RÍGIDA):
   Promedio: {zapata_settlements.mean():.4f} mm
   Diferencial: {differential:.4f} mm ✓
 
-BORDES (DOMINIO 3B):
-  Borde X (4.5,0): {z_surf[(np.abs(x_surf-4.5)<0.1) & (np.abs(y_surf-0)<0.1)].max():.4f} mm
-  Borde Y (0,4.5): {z_surf[(np.abs(x_surf-0)<0.1) & (np.abs(y_surf-4.5)<0.1)].max():.4f} mm
-  Esquina (4.5,4.5): {z_surf[(np.abs(x_surf-4.5)<0.1) & (np.abs(y_surf-4.5)<0.1)].max():.4f} mm
+BORDES (DOMINIO 6B):
+  Borde X ({Lx_quarter},0): {z_surf[(np.abs(x_surf-Lx_quarter)<0.1) & (np.abs(y_surf-0)<0.1)].max() if len(z_surf[(np.abs(x_surf-Lx_quarter)<0.1) & (np.abs(y_surf-0)<0.1)]) > 0 else 0:.4f} mm
+  Borde Y (0,{Ly_quarter}): {z_surf[(np.abs(x_surf-0)<0.1) & (np.abs(y_surf-Ly_quarter)<0.1)].max() if len(z_surf[(np.abs(x_surf-0)<0.1) & (np.abs(y_surf-Ly_quarter)<0.1)]) > 0 else 0:.4f} mm
+  Esquina ({Lx_quarter},{Ly_quarter}): {z_surf[(np.abs(x_surf-Lx_quarter)<0.1) & (np.abs(y_surf-Ly_quarter)<0.1)].max() if len(z_surf[(np.abs(x_surf-Lx_quarter)<0.1) & (np.abs(y_surf-Ly_quarter)<0.1)]) > 0 else 0:.4f} mm
 
 VENTAJAS:
   ✓ Zapata casi perfectamente rígida
   ✓ Diferencial < 0.01 mm bajo zapata
-  ✓ Distribución uniforme solo donde necesario
-  ✓ Dominio 3B: eficiente (asentamiento disipado)
+  ✓ Dominio 6B: asentamientos en bordes ≈0
+  ✓ Profundidad 20m: suficiente para disipación
+  ✓ Df=0: Base zapata en z=0 (superficie) ✓
   ✓ Mallado automático en función de B
 
 NOTA:
-  Bordes con asentamientos altos (≈{border_max:.2f}mm) es esperado
-  en dominio 3B. Para bordes ≈0 usar dominio 5-6B.
-  Modelo optimizado para análisis bajo zapata.
+  Eje Y INVERTIDO: hundimientos hacia abajo ✓
+  Dominio 6B minimiza efectos de borde.
 """
 
 ax4.text(0.05, 0.95, info_text, transform=ax4.transAxes,
@@ -225,7 +228,7 @@ ax4.text(0.05, 0.95, info_text, transform=ax4.transAxes,
 
 # Guardar
 plt.tight_layout(rect=[0, 0, 1, 0.97])
-output_file = 'modelo_refinado_3B.png'
+output_file = 'modelo_refinado_6B_20m.png'
 plt.savefig(output_file, dpi=300, bbox_inches='tight', facecolor='white')
 print(f"\n✓ Visualización guardada: {output_file}")
 print(f"  Resolución: 300 DPI")
