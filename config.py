@@ -43,7 +43,7 @@ DOMINIO = {
 # ===================================================================================
 
 MALLA = {
-    'tipo': 'uniform',          # Opciones: 'uniform', 'refined', 'graded'
+    'tipo': 'refined',          # Opciones: 'uniform', 'refined', 'graded'
                                 # - uniform: malla uniforme en todo el dominio
                                 # - refined: malla refinada en zapata, gruesa afuera
                                 # - graded: transición gradual geométrica (RECOMENDADO)
