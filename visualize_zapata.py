@@ -668,7 +668,7 @@ else:
 # Configuración de ejes
 ax5.set_xlabel('Distancia X (m)', fontsize=12, fontweight='bold')
 ax5.set_ylabel('Asentamiento (mm)', fontsize=12, fontweight='bold')
-ax5.set_title('Perfil Horizontal - Eje X en Superficie (Y=0, Z=0)', fontsize=13, fontweight='bold', pad=15)
+ax5.set_title('Perfil Horizontal - Eje X en Superficie', fontsize=12, fontweight='bold', pad=10)
 ax5.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 ax5.legend(loc='upper right', fontsize=10, framealpha=0.9)
 ax5.set_xlim(0, Lx_quarter)
