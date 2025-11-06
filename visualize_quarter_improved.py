@@ -75,18 +75,19 @@ except FileNotFoundError:
 # -------------------------
 # PARÁMETROS DEL MODELO
 # -------------------------
-Lx_quarter = 10.0
-Ly_quarter = 10.0
+# DOMINIO AMPLIADO: 40m × 40m completo (20m × 20m en modelo 1/4)
+Lx_quarter = 20.0  # Ampliado de 10.0 a 20.0m
+Ly_quarter = 20.0  # Ampliado de 10.0 a 20.0m
 Lz_soil = 20.0
 B_quarter = 1.5
 L_quarter = 1.5
 h_zapata = 0.6
 P_total_quarter = 1127.14 / 4.0
-E_soil = 30000.0
+E_soil = 20000.0  # kPa (20 MPa)
 nu_soil = 0.3
 rho_soil = 1800.0
-nx = 10
-ny = 10
+nx = 20  # Aumentado de 10 a 20
+ny = 20  # Aumentado de 10 a 20
 nz = 15
 dx = Lx_quarter / nx
 dy = Ly_quarter / ny

@@ -21,14 +21,15 @@ ops.model('basic', '-ndm', 3, '-ndf', 3)
 # -------------------------
 # PARÁMETROS GEOMÉTRICOS - SUELO (1/4 del dominio)
 # -------------------------
-# Dominio de 1/4: solo modelamos un cuadrante
-Lx_quarter = 10.0    # Mitad de 20m
-Ly_quarter = 10.0    # Mitad de 20m
+# DOMINIO AMPLIADO: 40m × 40m completo (20m × 20m en modelo 1/4)
+# Para asegurar que bordes lejanos tengan asentamientos ≈ 0
+Lx_quarter = 20.0    # Ampliado de 10.0 a 20.0m (mitad de 40m)
+Ly_quarter = 20.0    # Ampliado de 10.0 a 20.0m (mitad de 40m)
 Lz_soil = 20.0       # Profundidad completa
 
-# Discretización (misma densidad que el modelo refinado)
-nx = 10      # 10 elementos en x (equivalente a 20 en modelo completo)
-ny = 10      # 10 elementos en y
+# Discretización (mantener dx=dy=1m)
+nx = 20      # Aumentado de 10 a 20 elementos en x
+ny = 20      # Aumentado de 10 a 20 elementos en y
 nz = 15      # 15 elementos en z
 
 # Espaciamiento

@@ -21,12 +21,14 @@ ops.model('basic', '-ndm', 3, '-ndf', 3)
 # -------------------------
 # PARÁMETROS GEOMÉTRICOS
 # -------------------------
-Lx_quarter = 10.0
-Ly_quarter = 10.0
+# DOMINIO AMPLIADO: 40m × 40m completo (20m × 20m en modelo 1/4)
+# Para asegurar que bordes lejanos tengan asentamientos ≈ 0
+Lx_quarter = 20.0  # Ampliado de 10.0 a 20.0m
+Ly_quarter = 20.0  # Ampliado de 10.0 a 20.0m
 Lz_soil = 20.0
 
-nx = 10
-ny = 10
+nx = 20  # Aumentado de 10 a 20 (mantener dx = 1m)
+ny = 20  # Aumentado de 10 a 20 (mantener dy = 1m)
 nz = 15
 
 dx = Lx_quarter / nx
