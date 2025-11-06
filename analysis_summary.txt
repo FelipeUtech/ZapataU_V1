@@ -7,18 +7,18 @@ MODELO:
   Dominio: 9.0m × 9.0m × 20.0m
   Modelo: Cuarto con simetría
   Malla: graded
-  Elementos: 14 × 14 × 24 = 4704
+  Elementos: 14 × 14 × 24 = 4517
   Nodos: 5625
-  Material suelo: E=20000.0 kPa, ν=0.3
+  Estratos suelo: Estrato 1 (E=10 MPa, h=3.0m), Estrato 2 (E=20 MPa, h=10.0m), Estrato 3 (E=50 MPa, h=7.0m)
   Carga total: 334.76 kN
   Presión contacto: 148.78 kPa
 
 RESULTADOS:
-  Asentamiento máximo: 14.4791 mm
-  Asentamiento mínimo: 1.3806 mm
-  Asentamiento promedio: 4.4681 mm
-  Desviación estándar: 3.3611 mm
-  Diferencial: 13.0986 mm
-  Relación diferencial: 0.9047
+  Asentamiento máximo: 21.7912 mm
+  Asentamiento mínimo: 0.7820 mm
+  Asentamiento promedio: 4.6317 mm
+  Desviación estándar: 5.5091 mm
+  Diferencial: 21.0093 mm
+  Relación diferencial: 0.9641
 
 ================================================================================
