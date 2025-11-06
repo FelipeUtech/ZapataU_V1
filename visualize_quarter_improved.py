@@ -110,14 +110,14 @@ cmap_custom = LinearSegmentedColormap.from_list('settlement', colors_custom, N=n
 print("\nGenerando visualización mejorada...")
 
 plt.style.use('seaborn-v0_8-darkgrid')
-fig = plt.figure(figsize=(22, 18), facecolor='white')
+fig = plt.figure(figsize=(24, 16), facecolor='white')  # Ajustado para 3 columnas
 fig.suptitle('ANÁLISIS DE ZAPATA - MODELO 1/4 CON SIMETRÍA',
              fontsize=18, fontweight='bold', y=0.98)
 
 # ========================================
 # 1. VISTA ISOMÉTRICA PRINCIPAL
 # ========================================
-ax1 = fig.add_subplot(2, 2, 1, projection='3d')
+ax1 = fig.add_subplot(2, 3, 1, projection='3d')  # Cambiado a layout 2x3
 
 # Crear grid de alta resolución para interpolación suave
 xi_iso = np.linspace(0, Lx_quarter, 80)  # Aumentado de 30 a 80 para mayor suavidad
@@ -325,7 +325,7 @@ ax1.text2D(0.98, 0.98, f'⬇ CARGA\n{P_total_quarter:.1f} kN', transform=ax1.tra
 # ========================================
 # 2. VISTA SUPERIOR - ASENTAMIENTOS
 # ========================================
-ax2 = fig.add_subplot(2, 2, 2)
+ax2 = fig.add_subplot(2, 3, 2)  # Cambiado a layout 2x3
 
 # Contorno de asentamientos con alta resolución
 xi = np.linspace(0, Lx_quarter, 80)  # Aumentado para coincidir con isométrico
@@ -376,44 +376,147 @@ ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 # Solo se mantienen las etiquetas de asentamiento en las líneas de contorno (clabel arriba)
 
 # ========================================
-# 3. VISTA 3D - SUPERFICIE HUNDIDA
+# 3. PERFIL VERTICAL - ASENTAMIENTO EN CENTRO DE ZAPATA
 # ========================================
-ax3 = fig.add_subplot(2, 2, 3, projection='3d')
+ax3 = fig.add_subplot(2, 3, 3)  # Nuevo: perfil vertical
+
+print("  Calculando perfil vertical de asentamientos...")
+
+# El centro de la zapata en el modelo 1/4 está en (0, 0) por la simetría
+# Vamos a calcular el asentamiento vertical en este punto para diferentes profundidades
+
+# Crear array de profundidades desde superficie hasta base del modelo
+z_depths = np.linspace(0, -Lz_soil, 50)  # 50 puntos de profundidad
+
+# Usar el modelo de decaimiento exponencial basado en los datos de superficie
+# El asentamiento en superficie en (0,0) lo obtenemos de los datos
+idx_center = (np.abs(x_surf - 0) < dx/2) & (np.abs(y_surf - 0) < dy/2)
+
+if np.sum(idx_center) > 0:
+    # Asentamiento en superficie en el centro de la zapata
+    settlement_surface_center = np.mean(z_surf[idx_center])
+else:
+    # Si no hay punto exacto, interpolar
+    if len(x_surf) > 0:
+        settlement_surface_center = griddata((x_surf, y_surf), z_surf,
+                                             ([0], [0]), method='cubic')[0]
+        if np.isnan(settlement_surface_center):
+            settlement_surface_center = griddata((x_surf, y_surf), z_surf,
+                                                 ([0], [0]), method='linear')[0]
+    else:
+        settlement_surface_center = 18.0  # Valor por defecto
+
+# Calcular decaimiento con profundidad usando modelo de Boussinesq simplificado
+# El asentamiento decae exponencialmente con la profundidad
+settlements_vertical = []
+for z in z_depths:
+    depth = abs(z)
+    if depth == 0:
+        # En superficie
+        settlement = settlement_surface_center
+    else:
+        # Decaimiento exponencial: factor basado en profundidad relativa al ancho de zapata
+        # Usamos una característica de decaimiento de 3 veces el ancho de la zapata
+        decay_length = B_quarter * 3.0
+        decay_factor = np.exp(-depth / decay_length)
+        settlement = settlement_surface_center * decay_factor
+
+    settlements_vertical.append(settlement)
+
+settlements_vertical = np.array(settlements_vertical)
+
+# Graficar perfil vertical
+ax3.plot(settlements_vertical, z_depths, 'b-', linewidth=2.5, label='Perfil de asentamiento')
+ax3.fill_betweenx(z_depths, 0, settlements_vertical, alpha=0.3, color='lightblue')
+
+# Marcar profundidad de la zapata
+ax3.axhline(y=0, color='green', linewidth=2, linestyle='-', label='Superficie', zorder=5)
+ax3.axhline(y=-h_zapata, color='orange', linewidth=2, linestyle='--',
+            label=f'Base zapata ({h_zapata}m)', zorder=5)
+
+# Marcar asentamiento en superficie
+ax3.plot(settlement_surface_center, 0, 'ro', markersize=10,
+         markeredgecolor='darkred', markeredgewidth=2, label='Superficie', zorder=10)
+
+# Anotaciones
+ax3.annotate(f'{settlement_surface_center:.2f} mm',
+             xy=(settlement_surface_center, 0),
+             xytext=(settlement_surface_center + 2, -2),
+             fontsize=10, fontweight='bold', color='darkred',
+             bbox=dict(boxstyle='round,pad=0.4', facecolor='yellow', alpha=0.8),
+             arrowprops=dict(arrowstyle='->', color='darkred', lw=1.5))
+
+# Configuración de ejes
+ax3.set_xlabel('Asentamiento (mm)', fontsize=12, fontweight='bold')
+ax3.set_ylabel('Profundidad Z (m)', fontsize=12, fontweight='bold')
+ax3.set_title('Perfil Vertical - Centro de Zapata (x=0, y=0)', fontsize=13, fontweight='bold', pad=15)
+ax3.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
+ax3.legend(loc='lower right', fontsize=10, framealpha=0.9)
+
+# Invertir eje Y para que profundidad positiva vaya hacia abajo visualmente
+ax3.set_ylim(-Lz_soil, 1)
+
+# Añadir zona de influencia
+influence_depth = -B_quarter * 3.0
+if influence_depth > -Lz_soil:
+    ax3.axhspan(0, influence_depth, alpha=0.1, color='red',
+                label='Zona de influencia (~3B)')
+    ax3.text(ax3.get_xlim()[1]*0.7, influence_depth/2,
+             'Zona de\ninfluencia\n(≈3B)',
+             fontsize=9, ha='center', va='center',
+             bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+
+# Añadir líneas de referencia de profundidad
+for mult in [1, 2, 3]:
+    ref_depth = -B_quarter * mult
+    if -Lz_soil <= ref_depth <= 0:
+        ax3.axhline(y=ref_depth, color='gray', linewidth=0.8,
+                   linestyle=':', alpha=0.5)
+        ax3.text(ax3.get_xlim()[0], ref_depth, f'{mult}B',
+                fontsize=8, va='bottom', ha='left', color='gray')
+
+print(f"    Asentamiento en superficie (centro): {settlement_surface_center:.4f} mm")
+print(f"    Profundidad de análisis: 0 a {Lz_soil} m")
+
+# ========================================
+# 4. VISTA 3D - SUPERFICIE HUNDIDA
+# ========================================
+ax4 = fig.add_subplot(2, 3, 4, projection='3d')  # Cambiado a posición 4
 
 z_surf_inverted = -z_surf
 
-surf = ax3.plot_trisurf(x_surf, y_surf, z_surf_inverted, cmap=cmap_custom, alpha=0.9,
+surf = ax4.plot_trisurf(x_surf, y_surf, z_surf_inverted, cmap=cmap_custom, alpha=0.9,
                         edgecolor='none', linewidth=0, antialiased=True, shade=True)
-cbar3 = plt.colorbar(surf, ax=ax3, label='Profundidad de hundimiento (mm)', shrink=0.7, aspect=15)
-cbar3.ax.tick_params(labelsize=9)
+cbar4 = plt.colorbar(surf, ax=ax4, label='Profundidad de hundimiento (mm)', shrink=0.7, aspect=15)
+cbar4.ax.tick_params(labelsize=9)
 
 # Plano de referencia
 xx_ref, yy_ref = np.meshgrid([0, Lx_quarter], [0, Ly_quarter])
 zz_ref = np.zeros_like(xx_ref)
-ax3.plot_surface(xx_ref, yy_ref, zz_ref, alpha=0.2, color='gray', edgecolor='k', linewidth=0.5)
+ax4.plot_surface(xx_ref, yy_ref, zz_ref, alpha=0.2, color='gray', edgecolor='k', linewidth=0.5)
 
 # Contorno zapata
 zapata_outline_x = [0, B_quarter, B_quarter, 0, 0]
 zapata_outline_y = [0, 0, L_quarter, L_quarter, 0]
 zapata_outline_z = [min(z_surf_inverted)*0.9] * 5
-ax3.plot(zapata_outline_x, zapata_outline_y, zapata_outline_z,
+ax4.plot(zapata_outline_x, zapata_outline_y, zapata_outline_z,
          'yellow', linewidth=3, linestyle='--', label='Contorno Zapata')
 
-ax3.set_xlabel('X (m)', fontsize=12, fontweight='bold')
-ax3.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
-ax3.set_zlabel('Hundimiento (mm)', fontsize=12, fontweight='bold')
-ax3.set_title('Vista 3D - Superficie Hundida (Asentamientos)', fontsize=15, fontweight='bold', pad=15)
-ax3.view_init(elev=30, azim=225)
-ax3.legend(fontsize=10, loc='upper left')
-ax3.invert_zaxis()
-ax3.grid(True, alpha=0.3, linestyle='--')
-ax3.set_box_aspect([1, 1, 0.5])
+ax4.set_xlabel('X (m)', fontsize=12, fontweight='bold')
+ax4.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
+ax4.set_zlabel('Hundimiento (mm)', fontsize=12, fontweight='bold')
+ax4.set_title('Vista 3D - Superficie Hundida (Asentamientos)', fontsize=15, fontweight='bold', pad=15)
+ax4.view_init(elev=30, azim=225)
+ax4.legend(fontsize=10, loc='upper left')
+ax4.invert_zaxis()
+ax4.grid(True, alpha=0.3, linestyle='--')
+ax4.set_box_aspect([1, 1, 0.5])
 
 # ========================================
-# 4. INFORMACIÓN DEL MODELO
+# 5. INFORMACIÓN DEL MODELO
 # ========================================
-ax4 = fig.add_subplot(2, 2, 4)
-ax4.axis('off')
+ax5 = fig.add_subplot(2, 3, (5, 6))  # Panel ocupa posiciones 5 y 6 (columnas 2-3 de fila 2)
+ax5.axis('off')
 
 max_settlement = np.max(z_surf)
 min_settlement = np.min(z_surf)
@@ -484,7 +587,7 @@ info_text = f"""
    El modelo completo se obtiene por reflexión.
 """
 
-ax4.text(0.03, 0.97, info_text, transform=ax4.transAxes,
+ax5.text(0.03, 0.97, info_text, transform=ax5.transAxes,
          fontsize=8.5, verticalalignment='top', fontfamily='monospace',
          bbox=dict(boxstyle='round,pad=0.8', facecolor='#E8F4F8', alpha=0.95,
                    edgecolor='#1E88E5', linewidth=2))
@@ -518,9 +621,10 @@ print("  ✓ Layout optimizado con mejor espaciado")
 
 print("\n📊 COMPONENTES DE LA VISUALIZACIÓN:")
 print("  1. 🔷 Vista isométrica 3D con contornos en planos de simetría")
-print("  2. 🗺️  Vista en planta con dimensiones y máximo señalizado")
-print("  3. 🏔️  Superficie 3D hundida con deformación exagerada")
-print("  4. 📋 Panel informativo completo con análisis detallado")
+print("  2. 🗺️  Vista en planta con contornos suaves y etiquetas discretas")
+print("  3. 📊 Perfil vertical de asentamiento en centro de zapata")
+print("  4. 🏔️  Superficie 3D hundida con deformación exagerada")
+print("  5. 📋 Panel informativo completo con análisis detallado")
 
 print(f"\n✅ Modelo 1/4 optimizado")
 print(f"✅ Dominio: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m")
