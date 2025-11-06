@@ -165,12 +165,13 @@ def main():
     print(f"✓ {len(node_coords)} nodos creados")
     print(f"✓ {len(surface_nodes)} nodos en superficie")
 
-    # Identificar nodos en el tope de la zapata (z = -Df)
-    # Con zapata enterrada a profundidad Df, las cargas se aplican en z=-Df
+    # Identificar nodos en el tope de la zapata
+    # CORRECTO: BASE en z=-Df, TOPE en z=-Df+h (donde se aplican cargas)
     Df = zapata['Df']
-    z_tope_zapata = -Df  # Tope de zapata está a profundidad Df
+    h_zapata = zapata['h']
+    z_tope_zapata = -Df + h_zapata  # Tope de zapata (superficie superior)
     zapata_nodes = utils.identificar_nodos_en_cota(node_coords, z_tope_zapata, zapata_modelo, tolerancia=0.05)
-    print(f"✓ {len(zapata_nodes)} nodos en tope de zapata (z={z_tope_zapata}m, Df={Df}m)")
+    print(f"✓ {len(zapata_nodes)} nodos en tope de zapata (z={z_tope_zapata:.2f}m, Df={Df}m, base en z={-Df}m)")
 
     # Aplicar condiciones de borde
     print("\nAplicando condiciones de borde...")

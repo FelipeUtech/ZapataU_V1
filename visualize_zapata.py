@@ -337,14 +337,14 @@ if np.sum(idx_y0) > 2:  # Necesitamos al menos 3 puntos
                      linewidth=0, antialiased=True, shade=True, edgecolor='none')
 
 # ZAPATA (considerando profundidad de desplante Df)
-# Tope de zapata en z=-Df, base en z=-Df-h
-zapata_z_top = -Df
-zapata_z_bottom = -Df - h_zapata
+# CORRECTO: BASE en z=-Df, TOPE en z=-Df+h
+zapata_z_base = -Df
+zapata_z_top = -Df + h_zapata
 zapata_corners = [
     [0, 0, zapata_z_top], [B_quarter, 0, zapata_z_top],
     [B_quarter, L_quarter, zapata_z_top], [0, L_quarter, zapata_z_top],
-    [0, 0, zapata_z_bottom], [B_quarter, 0, zapata_z_bottom],
-    [B_quarter, L_quarter, zapata_z_bottom], [0, L_quarter, zapata_z_bottom]
+    [0, 0, zapata_z_base], [B_quarter, 0, zapata_z_base],
+    [B_quarter, L_quarter, zapata_z_base], [0, L_quarter, zapata_z_base]
 ]
 
 zapata_faces = [
@@ -726,12 +726,13 @@ try:
         z_top = z_bottom
 
     # Dibujar zapata enterrada a profundidad Df
-    # Tope de zapata en z=-Df, base en z=-Df-h
-    zapata_rect = plt.Rectangle((0.3, -Df), 0.4, -h_zapata,
+    # CORRECTO: BASE en z=-Df, TOPE en z=-Df+h
+    # Rectangle(xy, width, height) donde xy es esquina inferior izquierda
+    zapata_rect = plt.Rectangle((0.3, -Df), 0.4, h_zapata,
                                 facecolor='orange', edgecolor='darkorange',
                                 linewidth=3, alpha=0.8, zorder=10)
     ax_strata.add_patch(zapata_rect)
-    z_center_zapata = -Df - h_zapata/2
+    z_center_zapata = -Df + h_zapata/2
     ax_strata.text(0.5, z_center_zapata, 'ZAPATA', ha='center', va='center',
                   fontsize=10, fontweight='bold', color='white', zorder=11)
 
