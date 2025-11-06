@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Modelo 1/4 de Zapata con Malla Refinada
-- Dominio: 3B = 9m × 9m (completo) = 4.5m × 4.5m (modelo 1/4)
+Modelo 1/4 de Zapata con Malla Refinada AUTOMATIZADA
+- Dominio: 3B (automático en función de B)
 - Malla refinada en zapata: 0.25m × 0.25m
-- Malla exterior: 0.5m × 0.5m
-- Zapata 10× más rígida que la actual
+- Malla exterior hasta 3B: 0.5m × 0.5m
+- Malla profundidad > 3B: 1.0m × 1.0m
+- Zapata 10× más rígida
+- Df = 0 (zapata superficial)
 """
 
 import openseespy.opensees as ops
@@ -18,43 +20,67 @@ ops.wipe()
 ops.model('basic', '-ndm', 3, '-ndf', 3)
 
 # ================================================================================
-# PARÁMETROS GEOMÉTRICOS
+# PARÁMETROS GEOMÉTRICOS - AUTOMATIZADOS EN FUNCIÓN DE B
 # ================================================================================
-B = 3.0  # Ancho zapata completa
-dominio_quarter = 4.5  # Modelo 1/4: 4.5m × 4.5m (dominio completo 9m × 9m = 3B)
-zapata_quarter = 1.5   # Zapata en modelo 1/4
-Lz_soil = 20.0
-h_zapata = 0.6
+B = 3.0              # Ancho zapata completa (PARÁMETRO PRINCIPAL)
+h_zapata = 0.6       # Altura zapata
+Df = 0.0             # Profundidad de fundación (superficial)
+
+# Cálculos automáticos basados en B
+zapata_quarter = B / 2.0           # Zapata en modelo 1/4
+dominio_quarter = 3 * B / 2.0      # Dominio 3B en modelo 1/4: (3B)/2
+Lz_soil_shallow = 3 * B            # Profundidad hasta 3B (malla fina)
+Lz_soil_deep = 4 * B               # Profundidad total (hasta 4B)
 
 print("\n" + "="*80)
-print("MODELO 1/4 CON MALLA REFINADA - DOMINIO 3B")
+print("MODELO 1/4 CON MALLA REFINADA AUTOMATIZADA - DOMINIO 3B")
 print("="*80)
-print(f"\n📐 GEOMETRÍA:")
-print(f"  Dominio completo: {dominio_quarter*2}m × {dominio_quarter*2}m (3B)")
-print(f"  Dominio modelo 1/4: {dominio_quarter}m × {dominio_quarter}m")
-print(f"  Zapata (1/4): {zapata_quarter}m × {zapata_quarter}m")
-print(f"  Profundidad: {Lz_soil}m")
+print(f"\n📐 GEOMETRÍA (automatizada en función de B={B}m):")
+print(f"  Zapata completa: {B}m × {B}m × {h_zapata}m")
+print(f"  Dominio completo: {3*B}m × {3*B}m × {Lz_soil_deep}m (3B horizontal, 4B profundidad)")
+print(f"  Modelo 1/4: {dominio_quarter}m × {dominio_quarter}m × {Lz_soil_deep}m")
+print(f"  Zapata 1/4: {zapata_quarter}m × {zapata_quarter}m")
+print(f"  Df: {Df}m (superficial)")
 
 # ================================================================================
-# MALLA NO UNIFORME
+# MALLA NO UNIFORME AUTOMATIZADA
 # ================================================================================
-print(f"\n🔬 GENERANDO MALLA NO UNIFORME:")
+print(f"\n🔬 GENERANDO MALLA NO UNIFORME AUTOMATIZADA:")
+
+# Tamaños de elemento
+dx_zapata = 0.25      # Elemento en zona zapata
+dx_exterior = 0.5     # Elemento en zona exterior
+dz_shallow = 0.5      # Elemento vertical hasta 3B
+dz_deep = 1.0         # Elemento vertical después de 3B
 
 # Coordenadas X e Y (idénticas por simetría)
-# Zona zapata: 0 a 1.5m con dx=0.25m
-x_zapata = np.arange(0, 1.5 + 0.01, 0.25)
-# Zona exterior: 1.5 a 4.5m con dx=0.5m
-x_exterior = np.arange(2.0, 4.5 + 0.01, 0.5)
+# Zona zapata: 0 a B/2 con dx=0.25m
+x_zapata = np.arange(0, zapata_quarter + 0.01, dx_zapata)
+# Zona exterior: B/2 a 3B/2 con dx=0.5m
+x_start_exterior = zapata_quarter + dx_exterior
+x_exterior = np.arange(x_start_exterior, dominio_quarter + 0.01, dx_exterior)
 # Combinar
 x_coords = np.concatenate([x_zapata, x_exterior])
 y_coords = x_coords.copy()
 
-print(f"  Coordenadas X/Y: {len(x_coords)} posiciones")
-print(f"  X = {x_coords}")
+print(f"  Malla horizontal:")
+print(f"    - Zona zapata (0 a {zapata_quarter}m): dx = {dx_zapata}m → {len(x_zapata)} nodos")
+print(f"    - Zona exterior ({zapata_quarter}m a {dominio_quarter}m): dx = {dx_exterior}m → {len(x_exterior)} nodos")
+print(f"    - Total nodos X/Y: {len(x_coords)}")
 
-# Coordenadas Z: uniforme
-z_coords = np.arange(0, -Lz_soil - 0.01, -1.0)
-print(f"  Coordenadas Z: {len(z_coords)} niveles (dz=1.0m)")
+# Coordenadas Z: variable
+# Zona superficial: 0 a -3B con dz_shallow
+z_shallow = np.arange(0, -Lz_soil_shallow - 0.01, -dz_shallow)
+# Zona profunda: -3B a -4B con dz_deep
+z_start_deep = -Lz_soil_shallow - dz_deep
+z_deep = np.arange(z_start_deep, -Lz_soil_deep - 0.01, -dz_deep)
+# Combinar
+z_coords = np.concatenate([z_shallow, z_deep])
+
+print(f"  Malla vertical:")
+print(f"    - Zona superficial (0 a -{Lz_soil_shallow}m = -3B): dz = {dz_shallow}m → {len(z_shallow)} niveles")
+print(f"    - Zona profunda (-{Lz_soil_shallow}m a -{Lz_soil_deep}m): dz = {dz_deep}m → {len(z_deep)} niveles")
+print(f"    - Total niveles Z: {len(z_coords)}")
 
 # ================================================================================
 # CREACIÓN DE NODOS
@@ -97,7 +123,7 @@ print(f"  Nodos bajo zapata: {len(zapata_nodes)}")
 # ================================================================================
 print(f"\n🔒 APLICANDO CONDICIONES DE BORDE...")
 
-# Base fija
+# Base fija (fondo del modelo)
 baseNodeTags = list(range(nodesPerLayer * nz + 1, total_nodes + 1))
 for nodeTag in baseNodeTags:
     ops.fix(nodeTag, 1, 1, 1)
@@ -183,8 +209,9 @@ for k in range(nz):
             node8 = node4 + nodesPerLayer
 
             # Determinar material
-            # Zapata si: z >= -h_zapata Y x <= zapata_quarter Y y <= zapata_quarter
-            if z_elem >= -h_zapata and x_elem <= zapata_quarter and y_elem <= zapata_quarter:
+            # Zapata si: z >= -(Df+h_zapata) Y x <= zapata_quarter Y y <= zapata_quarter
+            # Con Df=0: zapata de z=0 a z=-h_zapata
+            if z_elem >= -(Df + h_zapata) and x_elem <= zapata_quarter and y_elem <= zapata_quarter:
                 matTag = 2  # Concreto
             else:
                 matTag = 1  # Suelo
@@ -276,12 +303,15 @@ print(f"  Asentamiento mínimo: {min_settlement:.4f} mm")
 print(f"  Asentamiento promedio (superficie): {avg_settlement:.4f} mm")
 
 # Guardar datos
-df.to_csv('settlements_3d_complete_refined.csv', index=False)
-surface_df[['X', 'Y', 'Settlement_mm']].to_csv('surface_settlements_refined.csv', index=False)
+output_3d = 'settlements_3d_complete.csv'
+output_surface = 'surface_settlements_quarter_full.csv'
+
+df.to_csv(output_3d, index=False)
+surface_df[['X', 'Y', 'Settlement_mm']].to_csv(output_surface, index=False)
 
 print(f"\n✓ Datos guardados:")
-print(f"  - settlements_3d_complete_refined.csv ({len(df)} puntos)")
-print(f"  - surface_settlements_refined.csv ({len(surface_df)} puntos)")
+print(f"  - {output_3d} ({len(df)} puntos)")
+print(f"  - {output_surface} ({len(surface_df)} puntos)")
 
 print(f"\n" + "="*80)
 print("ANÁLISIS COMPLETADO")
