@@ -296,6 +296,32 @@ for node in surface_nodes:
     surface_coords_quarter.append((coord[0], coord[1], settlement))
 
 # -------------------------
+# EXTRAER ASENTAMIENTOS 3D COMPLETOS (TODOS LOS NODOS)
+# -------------------------
+print("\nExtrayendo asentamientos 3D de todos los nodos...")
+all_settlements_3d = []
+
+for nodeTag in range(1, total_nodes + 1):
+    try:
+        disp = ops.nodeDisp(nodeTag, 3)  # Desplazamiento en Z
+        settlement = abs(disp * 1000)  # mm
+        coord = nodeCoord[nodeTag]
+        x, y, z = coord
+        all_settlements_3d.append((x, y, z, settlement))
+    except:
+        pass
+
+print(f"  Datos 3D extraídos: {len(all_settlements_3d)} nodos")
+
+# Guardar datos 3D completos
+with open('settlements_3d_complete.csv', 'w') as f:
+    f.write('X,Y,Z,Settlement_mm\n')
+    for x, y, z, s in all_settlements_3d:
+        f.write(f'{x:.6f},{y:.6f},{z:.6f},{s:.6f}\n')
+
+print(f"✓ Guardado: settlements_3d_complete.csv ({len(all_settlements_3d)} puntos)")
+
+# -------------------------
 # EXPANDIR RESULTADOS POR SIMETRÍA
 # -------------------------
 print("\n" + "="*70)
@@ -564,6 +590,7 @@ print("="*70)
 print("\nArchivos generados:")
 print("  - zapata_analysis_quarter.png")
 print("  - surface_settlements_quarter_full.csv")
+print("  - settlements_3d_complete.csv (NUEVO: datos 3D completos)")
 print("  - analysis_summary_quarter.txt")
 print("\n✓ Modelo 1/4 con resultados expandidos a modelo completo por simetría")
 print(f"✓ Ahorro computacional: {(1 - total_nodes/equivalent_full_nodes)*100:.1f}%\n")

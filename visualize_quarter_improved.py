@@ -11,6 +11,20 @@ import pandas as pd
 # ================================================================================
 # VISUALIZACIÓN MEJORADA DEL MODELO 1/4 - USANDO DATOS EXISTENTES
 # ================================================================================
+#
+# NOTA IMPORTANTE SOBRE DATOS:
+# - Si existe 'settlements_3d_complete.csv': USA DATOS REALES de OpenSeesPy
+# - Si NO existe: USA APROXIMACIÓN TEÓRICA para profundidad
+#
+# Para generar datos 3D reales:
+#   1. Ejecutar localmente: python zapata_analysis_quarter.py
+#   2. Ver INSTRUCCIONES_3D.md para más detalles
+#
+# Con datos 3D reales:
+#   ✓ Perfil vertical: datos reales nodales
+#   ✓ Planos verticales: aproximación (TODO: usar datos reales)
+#   ✓ Superficie: siempre usa datos reales
+# ================================================================================
 
 print("\n" + "="*80)
 print("GENERANDO VISUALIZACIÓN MEJORADA DEL MODELO 1/4")
@@ -20,10 +34,24 @@ print("="*80 + "\n")
 # CARGAR DATOS EXISTENTES
 # -------------------------
 print("Cargando datos de asentamientos...")
+
+# Intentar cargar datos 3D completos primero
+data_3d_available = False
 try:
-    # Intentar cargar datos del modelo quarter
+    data_3d = pd.read_csv('settlements_3d_complete.csv')
+    data_3d_available = True
+    print(f"✓ Datos 3D completos cargados: {len(data_3d)} puntos")
+    print(f"  Usando datos REALES de OpenSeesPy en todas las profundidades")
+except FileNotFoundError:
+    print("⚠ No se encontró settlements_3d_complete.csv")
+    print("  Usando datos de superficie + aproximación teórica para profundidad")
+    print("  Para obtener datos reales, ejecuta: python zapata_analysis_quarter.py")
+    print("  Ver INSTRUCCIONES_3D.md para más detalles\n")
+
+# Cargar datos de superficie
+try:
     surface_data = pd.read_csv('surface_settlements_quarter_full.csv')
-    print(f"✓ Datos cargados: {len(surface_data)} puntos")
+    print(f"✓ Datos de superficie cargados: {len(surface_data)} puntos")
 except FileNotFoundError:
     print("⚠ No se encontró surface_settlements_quarter_full.csv")
     print("  Generando datos sintéticos para demostración...")
@@ -383,47 +411,65 @@ ax3 = fig.add_subplot(2, 3, 3)  # Nuevo: perfil vertical
 print("  Calculando perfil vertical de asentamientos...")
 
 # El centro de la zapata en el modelo 1/4 está en (0, 0) por la simetría
-# Vamos a calcular el asentamiento vertical en este punto para diferentes profundidades
 
-# Crear array de profundidades desde superficie hasta base del modelo
-z_depths = np.linspace(0, -Lz_soil, 50)  # 50 puntos de profundidad
+if data_3d_available:
+    # =========== USAR DATOS REALES 3D ===========
+    print("    Usando datos REALES de OpenSeesPy para perfil vertical")
 
-# Usar el modelo de decaimiento exponencial basado en los datos de superficie
-# El asentamiento en superficie en (0,0) lo obtenemos de los datos
-idx_center = (np.abs(x_surf - 0) < dx/2) & (np.abs(y_surf - 0) < dy/2)
+    # Extraer datos en x=0, y=0 (centro de zapata)
+    data_center = data_3d[(np.abs(data_3d['X'] - 0) < dx/2) &
+                          (np.abs(data_3d['Y'] - 0) < dy/2)].copy()
 
-if np.sum(idx_center) > 0:
-    # Asentamiento en superficie en el centro de la zapata
-    settlement_surface_center = np.mean(z_surf[idx_center])
-else:
-    # Si no hay punto exacto, interpolar
-    if len(x_surf) > 0:
-        settlement_surface_center = griddata((x_surf, y_surf), z_surf,
-                                             ([0], [0]), method='cubic')[0]
-        if np.isnan(settlement_surface_center):
+    if len(data_center) > 0:
+        # Ordenar por profundidad
+        data_center = data_center.sort_values('Z', ascending=False)
+
+        z_depths = data_center['Z'].values
+        settlements_vertical = data_center['Settlement_mm'].values
+
+        settlement_surface_center = settlements_vertical[0]
+        print(f"    Puntos reales en perfil: {len(z_depths)}")
+    else:
+        # Fallback a aproximación
+        print("    ⚠ No hay datos en centro, usando aproximación")
+        data_3d_available = False  # Forzar uso de aproximación
+
+if not data_3d_available:
+    # =========== USAR APROXIMACIÓN TEÓRICA ===========
+    print("    Usando aproximación teórica (decaimiento exponencial)")
+
+    # Crear array de profundidades
+    z_depths = np.linspace(0, -Lz_soil, 50)
+
+    # Asentamiento en superficie
+    idx_center = (np.abs(x_surf - 0) < dx/2) & (np.abs(y_surf - 0) < dy/2)
+
+    if np.sum(idx_center) > 0:
+        settlement_surface_center = np.mean(z_surf[idx_center])
+    else:
+        if len(x_surf) > 0:
             settlement_surface_center = griddata((x_surf, y_surf), z_surf,
-                                                 ([0], [0]), method='linear')[0]
-    else:
-        settlement_surface_center = 18.0  # Valor por defecto
+                                                 ([0], [0]), method='cubic')[0]
+            if np.isnan(settlement_surface_center):
+                settlement_surface_center = griddata((x_surf, y_surf), z_surf,
+                                                     ([0], [0]), method='linear')[0]
+        else:
+            settlement_surface_center = 18.0
 
-# Calcular decaimiento con profundidad usando modelo de Boussinesq simplificado
-# El asentamiento decae exponencialmente con la profundidad
-settlements_vertical = []
-for z in z_depths:
-    depth = abs(z)
-    if depth == 0:
-        # En superficie
-        settlement = settlement_surface_center
-    else:
-        # Decaimiento exponencial: factor basado en profundidad relativa al ancho de zapata
-        # Usamos una característica de decaimiento de 3 veces el ancho de la zapata
-        decay_length = B_quarter * 3.0
-        decay_factor = np.exp(-depth / decay_length)
-        settlement = settlement_surface_center * decay_factor
+    # Decaimiento exponencial
+    settlements_vertical = []
+    for z in z_depths:
+        depth = abs(z)
+        if depth == 0:
+            settlement = settlement_surface_center
+        else:
+            decay_length = B_quarter * 3.0
+            decay_factor = np.exp(-depth / decay_length)
+            settlement = settlement_surface_center * decay_factor
 
-    settlements_vertical.append(settlement)
+        settlements_vertical.append(settlement)
 
-settlements_vertical = np.array(settlements_vertical)
+    settlements_vertical = np.array(settlements_vertical)
 
 # Graficar perfil vertical
 ax3.plot(settlements_vertical, z_depths, 'b-', linewidth=2.5, label='Perfil de asentamiento')
