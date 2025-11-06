@@ -38,19 +38,19 @@ print("Cargando datos de asentamientos...")
 # Intentar cargar datos 3D completos primero
 data_3d_available = False
 try:
-    data_3d = pd.read_csv('settlements_3d_complete.csv')
+    data_3d = pd.read_csv('settlements_3d_complete_refined.csv')
     data_3d_available = True
     print(f"✓ Datos 3D completos cargados: {len(data_3d)} puntos")
     print(f"  Usando datos REALES de OpenSeesPy en todas las profundidades")
 except FileNotFoundError:
-    print("⚠ No se encontró settlements_3d_complete.csv")
+    print("⚠ No se encontró settlements_3d_complete_refined.csv")
     print("  Usando datos de superficie + aproximación teórica para profundidad")
-    print("  Para obtener datos reales, ejecuta: python zapata_analysis_quarter.py")
+    print("  Para obtener datos reales, ejecuta: python zapata_refined_mesh.py")
     print("  Ver INSTRUCCIONES_3D.md para más detalles\n")
 
 # Cargar datos de superficie
 try:
-    surface_data = pd.read_csv('surface_settlements_quarter_full.csv')
+    surface_data = pd.read_csv('surface_settlements_refined.csv')
     print(f"✓ Datos de superficie cargados: {len(surface_data)} puntos")
 except FileNotFoundError:
     print("⚠ No se encontró surface_settlements_quarter_full.csv")
@@ -75,23 +75,25 @@ except FileNotFoundError:
 # -------------------------
 # PARÁMETROS DEL MODELO
 # -------------------------
-# DOMINIO OPTIMIZADO: 30m × 30m completo (15m × 15m en modelo 1/4)
-# 5× ancho zapata = 5 × 3m = 15m desde centro
-Lx_quarter = 15.0  # Modelo 1/4: 15m
-Ly_quarter = 15.0  # Modelo 1/4: 15m
+# DOMINIO REFINADO: 9m × 9m completo (4.5m × 4.5m en modelo 1/4)
+# 3B = 3 × 3m = 4.5m desde centro
+Lx_quarter = 4.5  # Modelo 1/4: 4.5m
+Ly_quarter = 4.5  # Modelo 1/4: 4.5m
 Lz_soil = 20.0
 B_quarter = 1.5
 L_quarter = 1.5
 h_zapata = 0.6
 P_total_quarter = 1127.14 / 4.0
 E_soil = 20000.0  # kPa (20 MPa)
+E_concrete = 250000000.0  # kPa (250 GPa - 10× más rígida)
 nu_soil = 0.3
 rho_soil = 1800.0
-nx = 15  # 15 elementos en x (dx = 1m)
-ny = 15  # 15 elementos en y (dy = 1m)
-nz = 15
-dx = Lx_quarter / nx
-dy = Ly_quarter / ny
+# Malla no uniforme: refinada en zapata (0.25m), normal fuera (0.5m)
+nx = 13  # Elementos en x (variable)
+ny = 13  # Elementos en y (variable)
+nz = 20
+dx = 0.25  # Aproximado (malla no uniforme)
+dy = 0.25  # Aproximado (malla no uniforme)
 dz = Lz_soil / nz
 
 # Extraer datos - intentar diferentes nombres de columnas
@@ -580,21 +582,22 @@ fs_settlement = allowable_settlement / max_settlement if max_settlement > 0 else
 
 info_text = f"""
 ╔═══════════════════════════════════════════════╗
-║  MODELO 1/4 CON SIMETRÍA - ANÁLISIS DETALLADO ║
+║  MODELO REFINADO CON MALLA ADAPTATIVA 3B     ║
 ╚═══════════════════════════════════════════════╝
 
 🏗️ GEOMETRÍA DEL CUADRANTE MODELADO:
   📐 Dimensiones: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m
-  🔲 Malla: {nx} × {ny} × {nz} elementos
-  🔹 Total nodos: {(nx+1)*(ny+1)*(nz+1)}
-  🔸 Total elementos: {nx*ny*nz}
-  📊 Tamaño elemento: {dx:.1f}m × {dy:.1f}m × {dz:.2f}m
+  🔲 Malla NO UNIFORME (refinada bajo zapata)
+  🔹 Zona zapata: 0.25m × 0.25m elementos
+  🔸 Zona exterior: 0.5m × 0.5m elementos
+  📊 Total nodos superficie: {len(surface_data)}
 
-🟧 ZAPATA (CUARTO DE SECCIÓN):
+🟧 ZAPATA RÍGIDA (CUARTO DE SECCIÓN):
   📏 Dimensiones: {B_quarter}m × {L_quarter}m × {h_zapata}m
   📍 Posición: Esquina (0, 0, 0)
   🔗 Nodos cargados: {zapata_nodes_count}
-  💪 Material: Concreto armado
+  💪 Material: Concreto 10× más rígido
+  🏋️ E_concrete: {E_concrete/1e6:.0f} GPa
 
 🔄 CONDICIONES DE SIMETRÍA:
   ✅ Plano X=0: Restricción en dirección X
@@ -602,20 +605,20 @@ info_text = f"""
   ✅ Base Z=-{Lz_soil}m: Empotrada (3 GDL fijos)
 
 🌍 MATERIAL DEL SUELO:
-  • Módulo elástico: {E_soil:.0f} kPa
+  • Módulo elástico: {E_soil:.0f} kPa = {E_soil/1000:.0f} MPa
   • Coef. Poisson: {nu_soil}
   • Densidad: {rho_soil:.0f} kg/m³
   • Tipo: Suelo medio-denso
 
 📊 MODELO COMPLETO EQUIVALENTE:
-  • Dominio total: 20m × 20m × 20m
+  • Dominio total: 9m × 9m × 20m (3B)
   • Zapata completa: 3m × 3m × 0.6m
-  • Nodos totales: {(nx+1)*(ny+1)*(nz+1)*4:,}
+  • Malla refinada bajo zapata
 
-⚡ EFICIENCIA COMPUTACIONAL:
-  ✓ Reducción de nodos: 75.00%
-  ✓ Reducción de tiempo: ~75.00%
-  ✓ Reducción de memoria: ~75.00%
+⚡ VENTAJAS MODELO REFINADO:
+  ✓ Malla adaptativa: precisión donde se necesita
+  ✓ Dominio 3B: eficiente y preciso
+  ✓ Zapata rígida: comportamiento realista
 
 🔻 CARGAS APLICADAS:
   • Carga total zapata: 1127.14 kN
@@ -678,7 +681,8 @@ print("  3. 📊 Perfil vertical de asentamiento en centro de zapata")
 print("  4. 🏔️  Superficie 3D hundida con deformación exagerada")
 print("  5. 📋 Panel informativo completo con análisis detallado")
 
-print(f"\n✅ Modelo 1/4 optimizado")
-print(f"✅ Dominio: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m")
+print(f"\n✅ Modelo 1/4 refinado con malla adaptativa")
+print(f"✅ Dominio 3B: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m")
+print(f"✅ Zapata rígida: E = 250 GPa (10× más rígida)")
 print(f"✅ Asentamiento máximo: {max_settlement:.4f} mm")
 print(f"✅ Factor de seguridad: {fs_settlement:.2f}\n")
