@@ -143,14 +143,14 @@ cmap_custom = LinearSegmentedColormap.from_list('settlement', colors_custom, N=n
 print("\nGenerando visualización mejorada...")
 
 plt.style.use('seaborn-v0_8-darkgrid')
-fig = plt.figure(figsize=(24, 16), facecolor='white')  # Ajustado para 3 columnas
+fig = plt.figure(figsize=(24, 20), facecolor='white')  # Ajustado para 3 filas x 3 columnas
 fig.suptitle('ANÁLISIS DE ZAPATA - MALLA GRADUAL OPTIMIZADA (6B-20m)',
              fontsize=18, fontweight='bold', y=0.98)
 
 # ========================================
 # 1. VISTA ISOMÉTRICA PRINCIPAL
 # ========================================
-ax1 = fig.add_subplot(2, 3, 1, projection='3d')  # Cambiado a layout 2x3
+ax1 = fig.add_subplot(3, 3, 1, projection='3d')  # Layout 3x3
 
 # Crear grid de alta resolución para interpolación suave
 xi_iso = np.linspace(0, Lx_quarter, 80)  # Aumentado de 30 a 80 para mayor suavidad
@@ -360,7 +360,7 @@ ax1.text2D(0.98, 0.98, f'⬇ CARGA\n{P_total_quarter:.1f} kN', transform=ax1.tra
 # ========================================
 # 2. VISTA SUPERIOR - ASENTAMIENTOS
 # ========================================
-ax2 = fig.add_subplot(2, 3, 2)  # Cambiado a layout 2x3
+ax2 = fig.add_subplot(3, 3, 2)  # Layout 3x3
 
 # Contorno de asentamientos con alta resolución
 xi = np.linspace(0, Lx_quarter, 80)  # Aumentado para coincidir con isométrico
@@ -413,7 +413,7 @@ ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
 # ========================================
 # 3. PERFIL VERTICAL - ASENTAMIENTO EN CENTRO DE ZAPATA
 # ========================================
-ax3 = fig.add_subplot(2, 3, 3)  # Nuevo: perfil vertical
+ax3 = fig.add_subplot(3, 3, 3)  # Layout 3x3 - perfil vertical
 
 print("  Calculando perfil vertical de asentamientos...")
 
@@ -534,44 +534,119 @@ print(f"    Profundidad de análisis: 0 a {Lz_soil} m")
 # ========================================
 # 4. VISTA 3D - SUPERFICIE HUNDIDA
 # ========================================
-ax4 = fig.add_subplot(2, 3, 4, projection='3d')  # Cambiado a posición 4
+ax4 = fig.add_subplot(3, 3, 4, projection='3d')  # Layout 3x3 - posición 4
 
-z_surf_inverted = -z_surf
+z_surf_hundido = z_surf  # Usar valores positivos para hundimiento hacia abajo
 
-surf = ax4.plot_trisurf(x_surf, y_surf, z_surf_inverted, cmap=cmap_custom, alpha=0.9,
+surf = ax4.plot_trisurf(x_surf, y_surf, z_surf_hundido, cmap=cmap_custom, alpha=0.9,
                         edgecolor='none', linewidth=0, antialiased=True, shade=True)
-cbar4 = plt.colorbar(surf, ax=ax4, label='Profundidad de hundimiento (mm)', shrink=0.7, aspect=15)
+cbar4 = plt.colorbar(surf, ax=ax4, label='Asentamiento (mm)', shrink=0.7, aspect=15)
 cbar4.ax.tick_params(labelsize=9)
 
-# Plano de referencia
+# Plano de referencia en z = max(asentamiento) para referencia visual
 xx_ref, yy_ref = np.meshgrid([0, Lx_quarter], [0, Ly_quarter])
-zz_ref = np.zeros_like(xx_ref)
+zz_ref = np.full_like(xx_ref, np.max(z_surf_hundido))
 ax4.plot_surface(xx_ref, yy_ref, zz_ref, alpha=0.2, color='gray', edgecolor='k', linewidth=0.5)
 
-# Contorno zapata
+# Contorno zapata en la superficie hundida
 zapata_outline_x = [0, B_quarter, B_quarter, 0, 0]
 zapata_outline_y = [0, 0, L_quarter, L_quarter, 0]
-zapata_outline_z = [min(z_surf_inverted)*0.9] * 5
+zapata_outline_z = [max(z_surf_hundido)*1.05] * 5
 ax4.plot(zapata_outline_x, zapata_outline_y, zapata_outline_z,
          'yellow', linewidth=3, linestyle='--', label='Contorno Zapata')
 
 ax4.set_xlabel('X (m)', fontsize=12, fontweight='bold')
 ax4.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
-ax4.set_zlabel('Hundimiento (mm)', fontsize=12, fontweight='bold')
+ax4.set_zlabel('Asentamiento (mm)', fontsize=12, fontweight='bold')
 ax4.set_title('Vista 3D - Superficie Hundida (Asentamientos)', fontsize=15, fontweight='bold', pad=15)
 ax4.view_init(elev=30, azim=225)
-# Mantener escala igual en todos los ejes para evitar distorsión
-ax4.set_box_aspect([Lx_quarter, Ly_quarter, max(abs(z_surf_inverted))])
-ax4.legend(fontsize=10, loc='upper left')
+# Invertir eje Z para que hundimiento vaya hacia abajo visualmente
 ax4.invert_zaxis()
+# Mantener escala igual en todos los ejes para evitar distorsión
+ax4.set_box_aspect([Lx_quarter, Ly_quarter, max(abs(z_surf_hundido))])
+ax4.legend(fontsize=10, loc='upper left')
 ax4.grid(True, alpha=0.3, linestyle='--')
 ax4.set_box_aspect([1, 1, 0.5])
 
 # ========================================
-# 5. INFORMACIÓN DEL MODELO
+# 5. PERFIL HORIZONTAL - ASENTAMIENTO EN EJE X (Y=0, Z=0)
 # ========================================
-ax5 = fig.add_subplot(2, 3, (5, 6))  # Panel ocupa posiciones 5 y 6 (columnas 2-3 de fila 2)
-ax5.axis('off')
+ax5 = fig.add_subplot(3, 3, 5)  # Layout 3x3 - posición 5
+
+print("  Calculando perfil horizontal en eje X...")
+
+# Extraer datos en superficie (Z=0) a lo largo de X, con Y=0
+# Filtrar datos en Y=0 (o muy cerca)
+idx_y0_surface = (np.abs(y_surf - 0) < dy/2)
+
+if np.sum(idx_y0_surface) > 2:
+    x_profile = x_surf[idx_y0_surface]
+    settlement_profile = z_surf[idx_y0_surface]
+
+    # Ordenar por X
+    sort_idx = np.argsort(x_profile)
+    x_profile_sorted = x_profile[sort_idx]
+    settlement_profile_sorted = settlement_profile[sort_idx]
+
+    # Eliminar duplicados promediando
+    unique_x, indices = np.unique(x_profile_sorted, return_inverse=True)
+    unique_settlement = np.zeros_like(unique_x)
+    for i in range(len(unique_x)):
+        unique_settlement[i] = np.mean(settlement_profile_sorted[indices == i])
+
+    # Graficar perfil
+    ax5.plot(unique_x, unique_settlement, 'b-', linewidth=2.5, label='Perfil de asentamiento')
+    ax5.fill_between(unique_x, 0, unique_settlement, alpha=0.3, color='lightblue')
+
+    # Marcar límite de zapata
+    ax5.axvline(x=B_quarter, color='orange', linewidth=2, linestyle='--',
+                label=f'Límite zapata ({B_quarter}m)', zorder=5)
+
+    # Marcar asentamiento máximo
+    max_idx = np.argmax(unique_settlement)
+    x_max = unique_x[max_idx]
+    settlement_max = unique_settlement[max_idx]
+
+    ax5.plot(x_max, settlement_max, 'ro', markersize=10,
+             markeredgecolor='darkred', markeredgewidth=2, label='Máximo', zorder=10)
+
+    # Anotación
+    ax5.annotate(f'{settlement_max:.2f} mm',
+                 xy=(x_max, settlement_max),
+                 xytext=(x_max + 1, settlement_max + 2),
+                 fontsize=10, fontweight='bold', color='darkred',
+                 bbox=dict(boxstyle='round,pad=0.4', facecolor='yellow', alpha=0.8),
+                 arrowprops=dict(arrowstyle='->', color='darkred', lw=1.5))
+
+    print(f"    Asentamiento máximo en perfil X: {settlement_max:.4f} mm en x={x_max:.2f} m")
+else:
+    # Fallback: interpolar si no hay datos directos
+    x_profile = np.linspace(0, Lx_quarter, 50)
+    settlement_profile = griddata((x_surf, y_surf), z_surf,
+                                   (x_profile, np.zeros_like(x_profile)), method='cubic')
+    if np.any(np.isnan(settlement_profile)):
+        settlement_profile = griddata((x_surf, y_surf), z_surf,
+                                       (x_profile, np.zeros_like(x_profile)), method='linear')
+
+    ax5.plot(x_profile, settlement_profile, 'b-', linewidth=2.5, label='Perfil de asentamiento')
+    ax5.fill_between(x_profile, 0, settlement_profile, alpha=0.3, color='lightblue')
+    ax5.axvline(x=B_quarter, color='orange', linewidth=2, linestyle='--',
+                label=f'Límite zapata ({B_quarter}m)', zorder=5)
+
+# Configuración de ejes
+ax5.set_xlabel('Distancia X (m)', fontsize=12, fontweight='bold')
+ax5.set_ylabel('Asentamiento (mm)', fontsize=12, fontweight='bold')
+ax5.set_title('Perfil Horizontal - Eje X en Superficie (Y=0, Z=0)', fontsize=13, fontweight='bold', pad=15)
+ax5.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
+ax5.legend(loc='upper right', fontsize=10, framealpha=0.9)
+ax5.set_xlim(0, Lx_quarter)
+ax5.set_ylim(0, max(z_surf) * 1.1)
+
+# ========================================
+# 6. INFORMACIÓN DEL MODELO
+# ========================================
+ax6 = fig.add_subplot(3, 3, (7, 9))  # Panel ocupa posiciones 7-9 (toda la fila 3)
+ax6.axis('off')
 
 max_settlement = np.max(z_surf)
 min_settlement = np.min(z_surf)
@@ -651,7 +726,7 @@ info_text = f"""
    El modelo completo se obtiene por reflexión.
 """
 
-ax5.text(0.03, 0.97, info_text, transform=ax5.transAxes,
+ax6.text(0.03, 0.97, info_text, transform=ax6.transAxes,
          fontsize=8.5, verticalalignment='top', fontfamily='monospace',
          bbox=dict(boxstyle='round,pad=0.8', facecolor='#E8F4F8', alpha=0.95,
                    edgecolor='#1E88E5', linewidth=2))
@@ -686,9 +761,10 @@ print("  ✓ Layout optimizado con mejor espaciado")
 print("\n📊 COMPONENTES DE LA VISUALIZACIÓN:")
 print("  1. 🔷 Vista isométrica 3D con contornos en planos de simetría")
 print("  2. 🗺️  Vista en planta con contornos suaves y etiquetas discretas")
-print("  3. 📊 Perfil vertical de asentamiento en centro de zapata")
-print("  4. 🏔️  Superficie 3D hundida con deformación exagerada")
-print("  5. 📋 Panel informativo completo con análisis detallado")
+print("  3. 📊 Perfil vertical de asentamiento en centro de zapata (Z)")
+print("  4. 🏔️  Superficie 3D hundida con deformación hacia abajo")
+print("  5. 📈 Perfil horizontal de asentamiento en eje X (superficie)")
+print("  6. 📋 Panel informativo completo con análisis detallado")
 
 print(f"\n✅ Modelo 1/4 con MALLA GRADUAL OPTIMIZADA 6B-20m")
 print(f"✅ B = {B}m, Dominio 6B = {6*B}m completo ({Lx_quarter}m modelo 1/4)")
