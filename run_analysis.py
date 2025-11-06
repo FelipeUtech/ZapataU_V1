@@ -164,9 +164,11 @@ def main():
     print(f"✓ {len(node_coords)} nodos creados")
     print(f"✓ {len(surface_nodes)} nodos en superficie")
 
-    # Identificar nodos de zapata
-    zapata_nodes = utils.identificar_nodos_zapata(surface_nodes, node_coords, zapata_modelo)
-    print(f"✓ {len(zapata_nodes)} nodos bajo zapata")
+    # Identificar nodos en el tope de la zapata (z = h_zapata)
+    # Las cargas se aplican en z=h_zapata (no en z=0)
+    h_zapata = zapata['h']
+    zapata_nodes = utils.identificar_nodos_en_cota(node_coords, h_zapata, zapata_modelo, tolerancia=0.05)
+    print(f"✓ {len(zapata_nodes)} nodos en tope de zapata (z={h_zapata}m)")
 
     # Aplicar condiciones de borde
     print("\nAplicando condiciones de borde...")
@@ -174,16 +176,28 @@ def main():
     utils.aplicar_condiciones_borde(nz + 1, nodes_per_layer, nx, ny, usar_cuarto)
     print("✓ Condiciones de borde aplicadas")
 
-    # Definir material
-    print("\nDefiniendo material del suelo...")
+    # Definir materiales
+    print("\nDefiniendo materiales...")
+
+    # Material 1: Suelo
     ops.nDMaterial('ElasticIsotropic', 1,
                    mat_suelo['E'], mat_suelo['nu'], mat_suelo['rho'])
-    print(f"✓ Material suelo: E={mat_suelo['E']} kPa, ν={mat_suelo['nu']}")
+    print(f"✓ Material suelo (tag=1): E={mat_suelo['E']} kPa, ν={mat_suelo['nu']}")
 
-    # Crear elementos
+    # Material 2: Concreto (zapata)
+    ops.nDMaterial('ElasticIsotropic', 2,
+                   mat_zapata['E'], mat_zapata['nu'], mat_zapata['rho'])
+    print(f"✓ Material concreto (tag=2): E={mat_zapata['E']} kPa, ν={mat_zapata['nu']}")
+
+    # Crear elementos de suelo y zapata
     print("\nCreando elementos...")
-    n_elements = utils.crear_elementos(nx, ny, nz, nodes_per_layer, mat_tag=1)
-    print(f"✓ {n_elements} elementos creados")
+    n_elements_suelo, n_elements_zapata = utils.crear_elementos_con_zapata(
+        nx, ny, nz, nodes_per_layer, x_coords, y_coords, z_coords,
+        zapata_modelo, mat_tag_suelo=1, mat_tag_zapata=2
+    )
+    print(f"✓ {n_elements_suelo} elementos de suelo creados")
+    print(f"✓ {n_elements_zapata} elementos de zapata rígida creados")
+    print(f"✓ Total: {n_elements_suelo + n_elements_zapata} elementos")
 
     # -------------------------
     # 5. APLICAR CARGAS

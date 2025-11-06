@@ -19,7 +19,7 @@ Todos los valores están en unidades del Sistema Internacional (SI):
 ZAPATA = {
     'B': 3.0,           # Ancho de la zapata (m)
     'L': 3.0,           # Largo de la zapata (m) - si es cuadrada, B = L
-    'h': 0.6,           # Altura/espesor de la zapata (m)
+    'h': 0.4,           # Altura/espesor de la zapata (m)
     'Df': 0.0,          # Profundidad de fundación (m) - 0 = superficial
 }
 
@@ -95,8 +95,8 @@ MATERIAL_SUELO = {
 # ===================================================================================
 
 MATERIAL_ZAPATA = {
-    'E': 200000.0,              # Módulo de Young del concreto (kPa)
-                                # Factor: 10x más rígido que suelo
+    'E': 25000000.0,            # Módulo de Young del concreto (kPa) = 25 GPa
+                                # Factor: 1250x más rígido que suelo
     'nu': 0.2,                  # Coeficiente de Poisson del concreto
     'rho': 2400.0,              # Densidad del concreto (kg/m³)
 }
