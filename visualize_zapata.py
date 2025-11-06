@@ -434,7 +434,7 @@ ax2.axvline(x=0, color='orange', linewidth=4, linestyle='-', alpha=0.6, label='S
 
 ax2.set_xlabel('X (m)', fontsize=13, fontweight='bold')
 ax2.set_ylabel('Y (m)', fontsize=13, fontweight='bold')
-ax2.set_title('Vista en Planta - Asentamientos en Superficie', fontsize=15, fontweight='bold', pad=15)
+ax2.set_title('Vista en Planta - Asentamientos en Superficie', fontsize=12, fontweight='bold', pad=8)
 ax2.set_aspect('equal')
 ax2.legend(loc='upper right', fontsize=10, framealpha=0.9)
 ax2.grid(True, alpha=0.4, linestyle='--', linewidth=0.5)
