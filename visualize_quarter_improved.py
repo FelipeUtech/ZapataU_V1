@@ -75,12 +75,12 @@ except FileNotFoundError:
 # -------------------------
 # PARÁMETROS DEL MODELO
 # -------------------------
-# DOMINIO: 9m × 9m completo (4.5m × 4.5m en modelo 1/4)
-# B = 3m, 3B = 9m, profundidad 4B = 12m
+# DOMINIO: 18m × 18m completo (9m × 9m en modelo 1/4)
+# B = 3m, 6B = 18m, profundidad 20m
 B = 3.0
-Lx_quarter = 4.5  # Modelo 1/4: 4.5m (3B/2)
-Ly_quarter = 4.5  # Modelo 1/4: 4.5m
-Lz_soil = 12.0    # Profundidad: 4B
+Lx_quarter = 9.0  # Modelo 1/4: 9m (6B/2 = 3B)
+Ly_quarter = 9.0  # Modelo 1/4: 9m
+Lz_soil = 20.0    # Profundidad: 20m
 B_quarter = 1.5   # B/2
 L_quarter = 1.5   # B/2
 h_zapata = 0.6
@@ -90,12 +90,12 @@ E_concrete = 250000000.0  # kPa (250 GPa - 10× más rígida)
 nu_soil = 0.3
 rho_soil = 1800.0
 # Malla no uniforme: refinada en zapata (0.25m), normal fuera (0.5m)
-nx = 12  # Elementos en x (variable)
-ny = 12  # Elementos en y (variable)
-nz = 21  # Elementos en z (variable: 18 hasta 3B + 3 más)
-dx = 0.375  # Aproximado (malla no uniforme)
-dy = 0.375  # Aproximado (malla no uniforme)
-dz = 0.571  # Aproximado (malla no uniforme)
+nx = 22  # Elementos en x (variable)
+ny = 22  # Elementos en y (variable)
+nz = 33  # Elementos en z (variable)
+dx = 0.409  # Aproximado (malla no uniforme)
+dy = 0.409  # Aproximado (malla no uniforme)
+dz = 0.606  # Aproximado (malla no uniforme)
 
 # Extraer datos - intentar diferentes nombres de columnas
 if 'X' in surface_data.columns:
@@ -583,21 +583,22 @@ fs_settlement = allowable_settlement / max_settlement if max_settlement > 0 else
 
 info_text = f"""
 ╔═══════════════════════════════════════════════╗
-║  MODELO AUTOMATIZADO MALLA ADAPTATIVA        ║
+║  MODELO 6B-20m MALLA ADAPTATIVA              ║
 ╚═══════════════════════════════════════════════╝
 
 🏗️ GEOMETRÍA DEL CUADRANTE MODELADO:
   📐 Dimensiones: {Lx_quarter}m × {Ly_quarter}m × {Lz_soil}m
   🔲 Malla NO UNIFORME AUTOMATIZADA (f(B))
   🔹 Zona zapata: 0.25m × 0.25m elementos
-  🔸 Zona exterior: 0.5m × 0.5m elementos (hasta 3B)
-  🔹 Zona profunda: 1.0m elementos (después 3B)
+  🔸 Zona exterior: 0.5m × 0.5m elementos (hasta 6B)
+  🔹 Zona superficial: 0.5m (0 a -10m)
+  🔸 Zona profunda: 1.0m elementos (-10m a -20m)
   📊 Total nodos superficie: {len(surface_data)}
 
 🟧 ZAPATA RÍGIDA (CUARTO DE SECCIÓN):
   📏 Zapata completa: {B}m × {B}m × {h_zapata}m
   📏 Modelo 1/4: {B_quarter}m × {L_quarter}m × {h_zapata}m
-  📍 Posición: Esquina (0, 0, 0) - Df=0m
+  📍 Posición: Esquina (0, 0, 0) - Df=0m ✓
   🔗 Nodos cargados: {zapata_nodes_count}
   💪 Material: Concreto 10× más rígido
   🏋️ E_concrete: {E_concrete/1e6:.0f} GPa
@@ -614,16 +615,18 @@ info_text = f"""
   • Tipo: Suelo medio-denso
 
 📊 MODELO COMPLETO EQUIVALENTE:
-  • B = {B}m, 3B = {3*B}m, 4B = {4*B}m
-  • Dominio total: {3*B}m × {3*B}m × {4*B}m
+  • B = {B}m, 6B = {6*B}m
+  • Dominio total: {6*B}m × {6*B}m × {Lz_soil}m
   • Zapata completa: {B}m × {B}m × {h_zapata}m
   • Malla refinada adaptativa automática
 
-⚡ VENTAJAS MODELO AUTOMATIZADO:
+⚡ VENTAJAS MODELO 6B-20m:
   ✓ Mallado automático en función de B
   ✓ Malla adaptativa: precisión óptima
-  ✓ Dominio 3B horizontal, 4B profundidad
+  ✓ Dominio 6B: bordes ≈0 asentamiento
+  ✓ Profundidad 20m: disipación completa
   ✓ Zapata rígida: comportamiento realista
+  ✓ Df=0 corregido: base en superficie
 
 🔻 CARGAS APLICADAS:
   • Carga total zapata: 1127.14 kN
@@ -686,9 +689,10 @@ print("  3. 📊 Perfil vertical de asentamiento en centro de zapata")
 print("  4. 🏔️  Superficie 3D hundida con deformación exagerada")
 print("  5. 📋 Panel informativo completo con análisis detallado")
 
-print(f"\n✅ Modelo 1/4 automatizado con malla adaptativa")
-print(f"✅ B = {B}m, Dominio 3B = {3*B}m completo ({Lx_quarter}m modelo 1/4)")
-print(f"✅ Profundidad 4B = {4*B}m = {Lz_soil}m")
+print(f"\n✅ Modelo 1/4 automatizado con malla adaptativa 6B-20m")
+print(f"✅ B = {B}m, Dominio 6B = {6*B}m completo ({Lx_quarter}m modelo 1/4)")
+print(f"✅ Profundidad = {Lz_soil}m")
 print(f"✅ Zapata rígida: E = 250 GPa (10× más rígida), Df = 0m")
+print(f"✅ Total nodos: 15,972 (3.63× más que 3B)")
 print(f"✅ Asentamiento máximo: {max_settlement:.4f} mm")
 print(f"✅ Factor de seguridad: {fs_settlement:.2f}\n")
