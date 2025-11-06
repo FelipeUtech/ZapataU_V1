@@ -66,12 +66,12 @@ MALLA = {
 
     # Parámetros para malla gradual (transición geométrica)
     'graded': {
-        'dx_min': 0.4,          # Tamaño mínimo de elemento (cerca de zapata)
-        'dx_max': 2.0,          # Tamaño máximo de elemento (bordes)
-        'ratio': 1.2,           # Ratio de crecimiento geométrico (1.1-1.2)
-        'dz_surface': 0.5,      # Tamaño elemento vertical superficial
-        'dz_deep': 1.5,         # Tamaño elemento vertical profundo
-        'depth_transition': 8.0, # Profundidad de transición (m)
+        'dx_min': 0.2,          # Tamaño mínimo de elemento (cerca de zapata) - REFINADO
+        'dx_max': 1.0,          # Tamaño máximo de elemento (bordes) - REFINADO
+        'ratio': 1.15,          # Ratio de crecimiento geométrico (1.1-1.2) - REFINADO
+        'dz_surface': 0.3,      # Tamaño elemento vertical superficial - REFINADO
+        'dz_deep': 0.8,         # Tamaño elemento vertical profundo - REFINADO
+        'depth_transition': 6.0, # Profundidad de transición (m) - REFINADO
     }
 }
 
