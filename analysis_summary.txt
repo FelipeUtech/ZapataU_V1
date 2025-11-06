@@ -1,0 +1,24 @@
+================================================================================
+REPORTE DE ANÁLISIS DE ZAPATA
+================================================================================
+
+MODELO:
+  Zapata: 3.0m × 3.0m × 0.6m
+  Dominio: 9.0m × 9.0m × 20.0m
+  Modelo: Cuarto con simetría
+  Malla: uniform
+  Elementos: 6 × 6 × 13 = 468
+  Nodos: 686
+  Material suelo: E=20000.0 kPa, ν=0.3
+  Carga total: 377.14 kN
+  Presión contacto: 167.62 kPa
+
+RESULTADOS:
+  Asentamiento máximo: 26.4063 mm
+  Asentamiento mínimo: 1.7885 mm
+  Asentamiento promedio: 4.8284 mm
+  Desviación estándar: 4.5855 mm
+  Diferencial: 24.6178 mm
+  Relación diferencial: 0.9323
+
+================================================================================

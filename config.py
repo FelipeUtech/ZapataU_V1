@@ -43,16 +43,16 @@ DOMINIO = {
 # ===================================================================================
 
 MALLA = {
-    'tipo': 'graded',           # Opciones: 'uniform', 'refined', 'graded'
+    'tipo': 'uniform',          # Opciones: 'uniform', 'refined', 'graded'
                                 # - uniform: malla uniforme en todo el dominio
                                 # - refined: malla refinada en zapata, gruesa afuera
                                 # - graded: transición gradual geométrica (RECOMENDADO)
 
     # Parámetros para malla uniforme
     'uniform': {
-        'dx': 1.0,              # Tamaño elemento en X (m)
-        'dy': 1.0,              # Tamaño elemento en Y (m)
-        'dz': 1.0,              # Tamaño elemento en Z (m)
+        'dx': 1.5,              # Tamaño elemento en X (m)
+        'dy': 1.5,              # Tamaño elemento en Y (m)
+        'dz': 1.5,              # Tamaño elemento en Z (m)
     },
 
     # Parámetros para malla refinada
