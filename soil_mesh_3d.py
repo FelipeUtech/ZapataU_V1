@@ -57,25 +57,25 @@ baseNodeTags = list(range(nodesPerLayer * nz + 1, nodesPerLayer * (nz + 1) + 1))
 for nodeTag in baseNodeTags:
     ops.fix(nodeTag, 1, 1, 1)
 
-# Fijar bordes laterales con rodillos
-for k in range(nz + 1):
+# Fijar bordes laterales con rodillos (excluyendo la base que ya está fija)
+for k in range(nz):  # Solo hasta nz-1 para no duplicar con la base
     currentLayer = k * nodesPerLayer
-    
+
     # Borde x = 0
     for j in range(ny + 1):
         nodeTag = currentLayer + j * (nx + 1) + 1
         ops.fix(nodeTag, 1, 0, 0)
-    
+
     # Borde x = Lx
     for j in range(ny + 1):
         nodeTag = currentLayer + j * (nx + 1) + (nx + 1)
         ops.fix(nodeTag, 1, 0, 0)
-    
+
     # Borde y = 0
     for i in range(nx + 1):
         nodeTag = currentLayer + i + 1
         ops.fix(nodeTag, 0, 1, 0)
-    
+
     # Borde y = Ly
     for i in range(nx + 1):
         nodeTag = currentLayer + ny * (nx + 1) + i + 1
@@ -153,4 +153,4 @@ with open('node_coordinates.csv', 'w') as f:
     for tag, coord in nodeCoord.items():
         f.write(f'{tag},{coord[0]},{coord[1]},{coord[2]}\n')
 
-print("\nCoordenadas de nodos exportadas a 'node_coordinates.csv'"
+print("\nCoordenadas de nodos exportadas a 'node_coordinates.csv'")
