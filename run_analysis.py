@@ -98,6 +98,7 @@ def main():
 
     dominio = {'Lx': Lx, 'Ly': Ly, 'Lz': Lz}
     zapata_modelo = {'B': B_modelo, 'L': L_modelo, 'h': zapata['h'],
+                     'Df': zapata['Df'],  # Agregar profundidad de desplante
                      'x_min': 0.0, 'y_min': 0.0}
 
     # -------------------------

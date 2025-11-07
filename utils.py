@@ -216,6 +216,11 @@ def generar_malla_gradual(dominio, zapata, params):
     z_soil = np.concatenate([z_shallow, z_deep])
     z_soil = np.unique(z_soil)
 
+    # CORRECCIÓN para Df > 0: Eliminar planos de suelo que caigan DENTRO de la zapata
+    # (entre z_zapata_base y z_zapata_top, excluyendo los extremos)
+    # Esto evita crear elementos de zapata muy delgados que causan problemas numéricos
+    z_soil = z_soil[(z_soil > z_zapata_top) | (z_soil < z_zapata_base)]
+
     # Combinar zapata y suelo, asegurando que z=0 esté incluido
     z_coords = np.concatenate([z_zapata, z_soil])
     z_coords = np.unique(z_coords)[::-1]  # Ordenar descendente
@@ -499,6 +504,11 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
     z_zapata_base = -Df
     z_zapata_top = -Df + h_zapata
 
+    # Debug (comentado)
+    # print(f"  DEBUG: Parámetros zapata:")
+    # print(f"    B={B_zapata:.2f}m, L={L_zapata:.2f}m, h={h_zapata:.2f}m, Df={Df:.2f}m")
+    # print(f"    z_base={z_zapata_base:.2f}m, z_top={z_zapata_top:.2f}m")
+
     for k in range(nz):
         for j in range(ny):
             for i in range(nx):
@@ -521,11 +531,17 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
                 en_area_zapata = (x_elem <= B_zapata and y_elem <= L_zapata)
 
                 # Determinar tipo de elemento
-                # 1. ZAPATA: dentro del área BxL, entre z=-Df y z=-Df+h
+                # 1. ZAPATA: dentro del área BxL, entre z=-Df (base) y z=-Df+h (tope)
                 es_zapata = (en_area_zapata and z_zapata_base <= z_elem <= z_zapata_top)
 
-                # 2. HUECO: dentro del área BxL, entre z=0 y z=-Df (excavación)
-                es_hueco = (en_area_zapata and -Df < z_elem <= 0)
+                # 2. HUECO: dentro del área BxL, entre z=0 y z=-Df+h (excavación SOBRE la zapata)
+                # CORRECCIÓN: El hueco va desde el TOPE de la zapata hacia arriba, no desde la base
+                es_hueco = (en_area_zapata and z_zapata_top < z_elem <= 0)
+
+                # Debug (comentado)
+                # if i == 0 and j == 0 and -2.5 <= z_elem <= 0.5:
+                #     tipo = 'HUECO' if es_hueco else ('ZAPATA' if es_zapata else 'SUELO')
+                #     print(f"  DEBUG [{tipo}]: z={z_elem:6.2f}, en_area_zapata={en_area_zapata}")
 
                 if es_hueco:
                     # NO crear elemento en el hueco de excavación
