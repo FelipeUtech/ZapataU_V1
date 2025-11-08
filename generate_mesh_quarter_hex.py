@@ -102,7 +102,8 @@ for k in range(nz2):
         domain_id_soil[elem_idx] = 2  # SOIL_2
         elem_idx += 1
 
-# SOIL_1 (capa superior) - aquí necesitamos excluir la zona de la zapata
+# SOIL_1 (capa superior) - excluir la zona de la zapata
+elements_to_keep = []
 for k in range(nz1):
     layer_z = z_coords_soil1[k]
     for j in range(ny):
@@ -117,10 +118,14 @@ for k in range(nz1):
 
             if not in_footing_zone:
                 domain_id_soil[elem_idx] = 1  # SOIL_1
-            else:
-                domain_id_soil[elem_idx] = 1  # Por ahora, luego lo quitamos
+                elements_to_keep.append(elem_idx)
+            # Si está en zona de zapata, no lo agregamos
 
             elem_idx += 1
+
+# Filtrar elementos del suelo (solo los que no están en zona de zapata)
+elements_soil_filtered = elements_soil[elements_to_keep]
+domain_id_soil_filtered = domain_id_soil[elements_to_keep]
 
 # Crear malla de la zapata
 x_coords_foot = np.linspace(x_foot_start, x_foot_end, 6)
@@ -134,11 +139,11 @@ domain_id_foot = np.full(len(elements_foot), 4, dtype=int)  # FOOTING
 offset = len(nodes_soil)
 elements_foot_offset = elements_foot + offset
 points = np.vstack([nodes_soil, nodes_foot])
-elements_all = np.vstack([elements_soil, elements_foot_offset])
-domain_id_combined = np.concatenate([domain_id_soil, domain_id_foot])
+elements_all = np.vstack([elements_soil_filtered, elements_foot_offset])
+domain_id_combined = np.concatenate([domain_id_soil_filtered, domain_id_foot])
 
 print(f"   - Total de nodos: {len(points)}")
-print(f"   - Elementos SOIL: {len(elements_soil)}")
+print(f"   - Elementos SOIL (filtrados): {len(elements_soil_filtered)}")
 print(f"   - Elementos FOOTING: {len(elements_foot)}")
 print(f"   - Total hexahedros: {len(elements_all)}")
 
@@ -175,19 +180,16 @@ if meshio_cells:
     meshio.write(xdmf_path, mesh)
     print(f"✅ Guardado XDMF: {xdmf_path}")
 
-gmsh.finalize()
-
 # ---------------------------------
 # Visualización rápida
 # ---------------------------------
-print("\n✅ Malla generada exitosamente")
+print("\n✅ Malla hexagonal estructurada generada exitosamente")
 print(f"   - Número de puntos: {len(points)}")
 print(f"   - Número total de elementos: {len(domain_id_combined)}")
 print(f"   - Dominios: SOIL_1, SOIL_2, SOIL_3, FOOTING")
 print(f"\n📊 Para visualizar en ParaView:")
 print(f"   paraview {vtu_path}")
-print(f"\n💡 Nota: Gmsh puede generar mezcla de elementos (hexaedros, tetraedros, prismas)")
-print(f"   según la geometría. Para malla 100% hexaédrica se requiere geometría estructurada.")
+print(f"\n💡 Malla 100% hexaédrica estructurada para OpenSees")
 
 # Descomenta las siguientes líneas si quieres ver la visualización interactiva:
 # plotter = pv.Plotter()
