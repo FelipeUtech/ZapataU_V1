@@ -6,10 +6,10 @@ IMPORTANTE: Estos son desplazamientos INCREMENTALES (solo carga de columna)
 El campo de tensiones inicial por gravedad está considerado.
 
 Desplazamientos verticales (uz) - INCREMENTALES:
-   Máximo (asentamiento): 0.026625 m = 26.625 mm
+   Máximo (asentamiento): 0.025639 m = 25.639 mm
    Mínimo: 0.000000e+00 m
-   Promedio: -5.982915e-03 m
-   Desv. estándar: 4.474491e-03 m
+   Promedio: -7.035600e-03 m
+   Desv. estándar: 3.364022e-03 m
 
 Archivos generados:
    - desplazamientos.csv

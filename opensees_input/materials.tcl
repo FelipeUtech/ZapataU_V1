@@ -8,7 +8,7 @@
 
 
 # -----------------------------------------
-# Material 1 (346 elementos)
+# Material 1 (2,056 elementos)
 # -----------------------------------------
 # Estrato de suelo 1
 # nDMaterial PressureDependMultiYield 1 <nd> <rho> <refShearModul> <refBulkModul> <cohesi> <peakShearStra> ...
@@ -17,7 +17,7 @@
 nDMaterial ElasticIsotropic 1 3.0e4 0.3 1.8  ;# COMPLETAR PARÁMETROS
 
 # -----------------------------------------
-# Material 2 (263 elementos)
+# Material 2 (961 elementos)
 # -----------------------------------------
 # Estrato de suelo 2
 # nDMaterial PressureDependMultiYield 2 <nd> <rho> <refShearModul> <refBulkModul> <cohesi> <peakShearStra> ...
@@ -26,7 +26,7 @@ nDMaterial ElasticIsotropic 1 3.0e4 0.3 1.8  ;# COMPLETAR PARÁMETROS
 nDMaterial ElasticIsotropic 2 3.0e4 0.3 1.8  ;# COMPLETAR PARÁMETROS
 
 # -----------------------------------------
-# Material 3 (220 elementos)
+# Material 3 (340 elementos)
 # -----------------------------------------
 # Estrato de suelo 3
 # nDMaterial PressureDependMultiYield 3 <nd> <rho> <refShearModul> <refBulkModul> <cohesi> <peakShearStra> ...
@@ -35,7 +35,7 @@ nDMaterial ElasticIsotropic 2 3.0e4 0.3 1.8  ;# COMPLETAR PARÁMETROS
 nDMaterial ElasticIsotropic 3 3.0e4 0.3 1.8  ;# COMPLETAR PARÁMETROS
 
 # -----------------------------------------
-# Material 4 (97 elementos)
+# Material 4 (183 elementos)
 # -----------------------------------------
 # Zapata de concreto
 # nDMaterial ElasticIsotropic 4 <E> <nu> <rho>

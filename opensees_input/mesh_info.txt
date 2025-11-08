@@ -2,12 +2,12 @@
 INFORMACIÓN DE LA MALLA CONVERTIDA
 ======================================================================
 
-Archivo origen: mallas/zapata_3D_cuarto.vtu
+Archivo origen: mallas/zapata_3D_cuarto_refined.vtu
 Fecha conversión: 1762630931.6125302
 
 ESTADÍSTICAS:
-  Número de nodos: 378
-  Número de elementos: 926
+  Número de nodos: 888
+  Número de elementos: 3,540
   Tipo de elemento: FourNodeTetrahedron
 
 LÍMITES DE LA MALLA:
@@ -16,10 +16,10 @@ LÍMITES DE LA MALLA:
   Z: [-20.000, 0.000] m
 
 DISTRIBUCIÓN POR MATERIAL:
-  Material 1: 346 elementos (37.4%)
-  Material 2: 263 elementos (28.4%)
-  Material 3: 220 elementos (23.8%)
-  Material 4: 97 elementos (10.5%)
+  Material 1: 2,056 elementos (58.1%)
+  Material 2: 961 elementos (27.1%)
+  Material 3: 340 elementos (9.6%)
+  Material 4: 183 elementos (5.2%)
 
 ======================================================================
 ARCHIVOS GENERADOS:
