@@ -20,7 +20,7 @@ ZAPATA = {
     'B': 3.0,           # Ancho de la zapata (m)
     'L': 3.0,           # Largo de la zapata (m) - si es cuadrada, B = L
     'h': 0.4,           # Altura/espesor de la zapata (m)
-    'Df': 0.5,          # Profundidad de fundación (m) - Zapata enterrada a 0.5m
+    'Df': 1.5,          # Profundidad de fundación (m) - Zapata enterrada a 1.5m
 }
 
 # ===================================================================================
