@@ -61,7 +61,12 @@ def print_config_summary(config):
 
     print(f"\n🏗️  Zapata:")
     foot = geom['footing']
-    print(f"   Ancho (B): {foot['B']} m")
+    B = foot.get('B', foot.get('L', 2.0))  # Ancho
+    L = foot.get('L', B)  # Largo (por defecto igual a B si no se especifica)
+    es_rectangular = B != L
+    print(f"   Ancho (B): {B} m")
+    print(f"   Largo (L): {L} m")
+    print(f"   Tipo: {'Rectangular' if es_rectangular else 'Cuadrada'}")
     print(f"   Profundidad (Df): {foot['Df']} m")
     print(f"   Espesor (tz): {foot['tz']} m")
 
@@ -96,14 +101,19 @@ def generate_mesh_from_config(config):
     Lx = geom['domain']['Lx']
     Ly = geom['domain']['Ly']
     Lz = geom['domain']['Lz']
-    B = geom['footing']['B']
-    Df = geom['footing']['Df']
-    tz = geom['footing']['tz']
+
+    # Soportar zapatas rectangulares (B × L)
+    foot = geom['footing']
+    B = foot.get('B', foot.get('L', 2.0))  # Ancho (eje X)
+    L = foot.get('L', B)  # Largo (eje Y), por defecto igual a B
+    Df = foot['Df']
+    tz = foot['tz']
 
     z_base = -Df - tz
     z_top = -Df
+    # Centrar zapata en el dominio
     x0 = Lx - B / 2
-    y0 = Ly - B / 2
+    y0 = Ly - L / 2
 
     # Aplicar cuarto de dominio si está configurado
     if geom['domain']['quarter_domain']:
@@ -149,9 +159,22 @@ def generate_mesh_from_config(config):
             'z_bottom': z_bottom_layer
         })
 
-    # Crear excavación y zapata
-    excav = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, B / 4, B / 4, tz + Df)
-    foot = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, B / 4, B / 4, tz)
+    # Crear excavación y zapata (rectangular B × L)
+    # Si usar_cuarto_modelo=True, las dimensiones se dividen por 4 (mitad en X, mitad en Y)
+    # Si usar_cuarto_modelo=False, usar dimensiones completas
+    if geom['domain']['quarter_domain']:
+        excav_width = B / 4
+        excav_length = L / 4
+        foot_width = B / 4
+        foot_length = L / 4
+    else:
+        excav_width = B / 2
+        excav_length = L / 2
+        foot_width = B / 2
+        foot_length = L / 2
+
+    excav = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, excav_width, excav_length, tz + Df)
+    foot = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, foot_width, foot_length, tz)
     gmsh.model.occ.synchronize()
 
     # Cortar excavación de cada capa de suelo
@@ -195,9 +218,13 @@ def generate_mesh_from_config(config):
     # ---------------------------------
     print("Configurando refinamiento gradual...")
 
-    # Centro de la zapata
-    x_center = (x0 / 2 + x0 / 2 + B / 4) / 2
-    y_center = (y0 / 2 + y0 / 2 + B / 4) / 2
+    # Centro de la zapata (considerar dimensiones rectangulares)
+    if geom['domain']['quarter_domain']:
+        x_center = x0 / 2 + foot_width / 2
+        y_center = y0 / 2 + foot_length / 2
+    else:
+        x_center = x0 / 2 + foot_width / 2
+        y_center = y0 / 2 + foot_length / 2
     z_center = (z_base + z_top) / 2
 
     def size_callback(dim, tag, x, y, z, lc):

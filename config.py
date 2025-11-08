@@ -17,8 +17,8 @@ Todos los valores están en unidades del Sistema Internacional (SI):
 # ===================================================================================
 
 ZAPATA = {
-    'B': 3.0,           # Ancho de la zapata (m)
-    'L': 3.0,           # Largo de la zapata (m) - si es cuadrada, B = L
+    'B': 2.0,           # Ancho de la zapata (m) - lado menor
+    'L': 3.0,           # Largo de la zapata (m) - lado mayor (puede ser diferente de B)
     'h': 0.4,           # Altura/espesor de la zapata (m)
     'Df': 1.5,          # Profundidad de fundación (m) - Zapata enterrada a 1.5m
 }
@@ -27,12 +27,19 @@ ZAPATA = {
 # PARÁMETROS DEL DOMINIO DE SUELO
 # ===================================================================================
 
-DOMINIO = {
-    'factor_horizontal': 6,     # Factor multiplicador del ancho: dominio = factor × B
-                                # Recomendado: 5-6 para minimizar efectos de borde
+# Cálculo automático del dominio basado en dimensiones de zapata
+_lado_mayor_zapata = max(ZAPATA['B'], ZAPATA['L'])
+_factor_dominio = 8  # Factor multiplicador: dominio = 8 × lado mayor
 
-    'profundidad': 20.0,        # Profundidad total del dominio (m)
-                                # Recomendado: 6-7 veces el ancho B
+DOMINIO = {
+    'factor_horizontal': _factor_dominio,  # Factor multiplicador del lado mayor
+                                           # Se calcula como 8 × max(B, L)
+
+    'ancho_horizontal': _factor_dominio * _lado_mayor_zapata,  # Calculado automáticamente
+                                                                # = 8 × max(B, L)
+
+    'profundidad': None,        # Se calcula automáticamente como suma de estratos
+                                # Ver función calcular_profundidad_dominio()
 
     'usar_cuarto_modelo': True, # True = modelo 1/4 con simetría (más eficiente)
                                 # False = modelo completo
@@ -206,8 +213,35 @@ AVANZADO = {
 }
 
 # ===================================================================================
-# FUNCIONES DE UTILIDAD PARA VALIDACIÓN
+# FUNCIONES DE UTILIDAD PARA CÁLCULOS Y VALIDACIÓN
 # ===================================================================================
+
+def calcular_profundidad_dominio():
+    """
+    Calcula la profundidad total del dominio basada en la suma de espesores de estratos.
+    Retorna la profundidad total en metros.
+    """
+    profundidad_total = sum(estrato['espesor'] for estrato in ESTRATOS_SUELO)
+    return profundidad_total
+
+
+def obtener_dimensiones_dominio():
+    """
+    Obtiene las dimensiones completas del dominio.
+    Retorna un diccionario con Lx, Ly, Lz.
+    """
+    lado_mayor = max(ZAPATA['B'], ZAPATA['L'])
+    ancho_dominio = DOMINIO['factor_horizontal'] * lado_mayor
+    profundidad_dominio = calcular_profundidad_dominio()
+
+    return {
+        'Lx': ancho_dominio,
+        'Ly': ancho_dominio,
+        'Lz': profundidad_dominio,
+        'lado_mayor_zapata': lado_mayor,
+        'factor': DOMINIO['factor_horizontal']
+    }
+
 
 def validar_configuracion():
     """
@@ -227,8 +261,10 @@ def validar_configuracion():
     if DOMINIO['factor_horizontal'] < 3:
         errores.append("⚠️  ADVERTENCIA: Factor horizontal < 3 puede causar efectos de borde")
 
-    if DOMINIO['profundidad'] < 3 * ZAPATA['B']:
-        errores.append("⚠️  ADVERTENCIA: Profundidad < 3B puede ser insuficiente")
+    profundidad_calculada = calcular_profundidad_dominio()
+    lado_mayor = max(ZAPATA['B'], ZAPATA['L'])
+    if profundidad_calculada < 3 * lado_mayor:
+        errores.append(f"⚠️  ADVERTENCIA: Profundidad ({profundidad_calculada}m) < 3×lado_mayor ({3*lado_mayor}m) puede ser insuficiente")
 
     # Validar materiales
     if MATERIAL_SUELO['E'] <= 0 or MATERIAL_ZAPATA['E'] <= 0:
@@ -260,13 +296,21 @@ def validar_configuracion():
 
 def imprimir_resumen():
     """Imprime un resumen de la configuración actual."""
+    dimensiones = obtener_dimensiones_dominio()
+
     print("\n" + "="*80)
     print("RESUMEN DE CONFIGURACIÓN")
     print("="*80)
     print(f"\n📐 GEOMETRÍA:")
-    print(f"  Zapata: {ZAPATA['B']}m × {ZAPATA['L']}m × {ZAPATA['h']}m")
+    print(f"  Zapata: B={ZAPATA['B']}m × L={ZAPATA['L']}m × h={ZAPATA['h']}m")
+    es_cuadrada = ZAPATA['B'] == ZAPATA['L']
+    print(f"  Tipo: {'Cuadrada' if es_cuadrada else 'Rectangular'}")
     print(f"  Profundidad fundación: {ZAPATA['Df']}m")
-    print(f"  Dominio: {DOMINIO['factor_horizontal']}B × {DOMINIO['profundidad']}m profundidad")
+    print(f"\n  Dominio (calculado automáticamente):")
+    print(f"    Lado mayor zapata: {dimensiones['lado_mayor_zapata']}m")
+    print(f"    Factor horizontal: {dimensiones['factor']}× lado mayor")
+    print(f"    Ancho total (Lx=Ly): {dimensiones['Lx']}m = {dimensiones['factor']}×{dimensiones['lado_mayor_zapata']}m")
+    print(f"    Profundidad (Lz): {dimensiones['Lz']}m (suma de estratos)")
 
     print(f"\n🔬 MALLA:")
     print(f"  Tipo: {MALLA['tipo']}")
