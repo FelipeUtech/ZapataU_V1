@@ -128,26 +128,13 @@ z_excav_right = np.linspace(z_base, 0, nz_excav + 1)
 
 nodes_excav_right, elems_excav_right = create_structured_hexmesh(x_excav_right, y_excav_right, z_excav_right)
 
-# Zona frontal de excavación (al lado de la zapata en Y, entre X de zapata)
-x_excav_front = np.linspace(x0/2, x0/2 + B/4, nx_foot + 1)
-y_excav_front = np.linspace(0, y0/2, ny_soil_side + 1)
-z_excav_front = np.linspace(z_base, 0, nz_excav + 1)
-
-nodes_excav_front, elems_excav_front = create_structured_hexmesh(x_excav_front, y_excav_front, z_excav_front)
-
-# Zona trasera de excavación
-x_excav_back = np.linspace(x0/2, x0/2 + B/4, nx_foot + 1)
-y_excav_back = np.linspace(y0/2 + B/4, Ly, ny_soil_side + 1)
-z_excav_back = np.linspace(z_base, 0, nz_excav + 1)
-
-nodes_excav_back, elems_excav_back = create_structured_hexmesh(x_excav_back, y_excav_back, z_excav_back)
+# NO se crean zonas frontal ni trasera para dejar el hueco puro arriba de la zapata
+# (sin superficies verticales en los planos de simetría)
 
 mesh_excav_left = (nodes_excav_left, elems_excav_left, 1)  # SOIL_1
 mesh_excav_right = (nodes_excav_right, elems_excav_right, 1)
-mesh_excav_front = (nodes_excav_front, elems_excav_front, 1)
-mesh_excav_back = (nodes_excav_back, elems_excav_back, 1)
 
-print(f"✅ Excavación: {len(elems_excav_left) + len(elems_excav_right) + len(elems_excav_front) + len(elems_excav_back)} hexaedros")
+print(f"✅ Excavación: {len(elems_excav_left) + len(elems_excav_right)} hexaedros")
 
 # ---------------------------------
 # REGIÓN 3: Suelo Capa 1 (SOIL_1) - debajo de excavación
@@ -195,8 +182,6 @@ all_meshes = [
     mesh_soil1,
     mesh_excav_left,
     mesh_excav_right,
-    mesh_excav_front,
-    mesh_excav_back,
     mesh_foot
 ]
 
