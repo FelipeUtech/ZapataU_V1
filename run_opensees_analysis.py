@@ -442,13 +442,34 @@ def ejecutar_fase_gravedad(fuerzas_gravedad):
         print(f"   Estado de peso propio establecido")
 
         # Fijar el estado actual de gravedad como constante
+        # Esto mantiene las cargas de gravedad y el campo de tensiones
         print(f"   🔒 Fijando estado de gravedad con loadConst()")
         ops.loadConst('-time', 0.0)
 
-        return True
+        # Guardar desplazamientos de la fase de gravedad
+        # Los restaremos en post-procesamiento para obtener solo desplazamientos incrementales
+        print(f"   💾 Guardando desplazamientos de gravedad para post-procesamiento")
+
+        # Obtener todos los nodos del modelo
+        node_tags = ops.getNodeTags()
+
+        # Guardar desplazamientos de gravedad en diccionario
+        desplazamientos_gravedad = {}
+        for node_tag in node_tags:
+            disp = ops.nodeDisp(node_tag)
+            desplazamientos_gravedad[node_tag] = {
+                'ux': disp[0],
+                'uy': disp[1],
+                'uz': disp[2]
+            }
+
+        print(f"   ✅ Desplazamientos de gravedad guardados ({len(node_tags)} nodos)")
+        print(f"   📊 Estado listo para fase 2: tensiones iniciales establecidas")
+
+        return True, desplazamientos_gravedad
     else:
         print(f"❌ Fase de gravedad falló")
-        return False
+        return False, {}
 
 
 def ejecutar_fase_carga():
@@ -507,8 +528,15 @@ def ejecutar_fase_carga():
         return False
 
 
-def extraer_resultados(nodos_dict, output_dir="resultados_opensees"):
-    """Extrae resultados de desplazamientos y reacciones."""
+def extraer_resultados(nodos_dict, desplazamientos_gravedad=None, output_dir="resultados_opensees"):
+    """
+    Extrae resultados de desplazamientos y reacciones.
+
+    Args:
+        nodos_dict: Diccionario de nodos {tag: (x, y, z)}
+        desplazamientos_gravedad: Desplazamientos de fase de gravedad para restar
+        output_dir: Directorio de salida
+    """
     print("\n📊 Extrayendo resultados...")
 
     output_path = Path(output_dir)
@@ -517,14 +545,24 @@ def extraer_resultados(nodos_dict, output_dir="resultados_opensees"):
     # Archivo de desplazamientos
     disp_file = output_path / "desplazamientos.csv"
     with open(disp_file, 'w') as f:
-        f.write("# Desplazamientos de nodos\n")
+        f.write("# Desplazamientos de nodos (INCREMENTALES - solo por carga de columna)\n")
         f.write("# node,x,y,z,ux,uy,uz,u_total\n")
 
         for tag, (x, y, z) in nodos_dict.items():
             try:
-                # Obtener desplazamientos
+                # Obtener desplazamientos totales
                 disp = ops.nodeDisp(tag)
-                ux, uy, uz = disp[0], disp[1], disp[2]
+                ux_total, uy_total, uz_total = disp[0], disp[1], disp[2]
+
+                # Restar desplazamientos de gravedad para obtener incrementales
+                if desplazamientos_gravedad and tag in desplazamientos_gravedad:
+                    ux = ux_total - desplazamientos_gravedad[tag]['ux']
+                    uy = uy_total - desplazamientos_gravedad[tag]['uy']
+                    uz = uz_total - desplazamientos_gravedad[tag]['uz']
+                else:
+                    # Si no hay datos de gravedad, usar valores totales
+                    ux, uy, uz = ux_total, uy_total, uz_total
+
                 u_total = np.sqrt(ux**2 + uy**2 + uz**2)
 
                 f.write(f"{tag},{x:.6f},{y:.6f},{z:.6f},{ux:.6e},{uy:.6e},{uz:.6e},{u_total:.6e}\n")
@@ -556,12 +594,19 @@ def extraer_resultados(nodos_dict, output_dir="resultados_opensees"):
 
     print(f"   ✅ Reacciones guardadas: {react_file}")
 
-    # Estadísticas de desplazamientos
+    # Estadísticas de desplazamientos (incrementales)
     desplazamientos = []
     for tag in nodos_dict.keys():
         try:
             disp = ops.nodeDisp(tag)
-            uz = disp[2]  # Desplazamiento vertical
+            uz_total = disp[2]  # Desplazamiento vertical total
+
+            # Restar desplazamiento de gravedad
+            if desplazamientos_gravedad and tag in desplazamientos_gravedad:
+                uz = uz_total - desplazamientos_gravedad[tag]['uz']
+            else:
+                uz = uz_total
+
             desplazamientos.append(uz)
         except:
             pass
@@ -572,10 +617,13 @@ def extraer_resultados(nodos_dict, output_dir="resultados_opensees"):
 
         with open(stats_file, 'w') as f:
             f.write("="*70 + "\n")
-            f.write("ESTADÍSTICAS DE RESULTADOS\n")
+            f.write("ESTADÍSTICAS DE RESULTADOS - DESPLAZAMIENTOS INCREMENTALES\n")
             f.write("="*70 + "\n\n")
 
-            f.write("Desplazamientos verticales (uz):\n")
+            f.write("IMPORTANTE: Estos son desplazamientos INCREMENTALES (solo carga de columna)\n")
+            f.write("El campo de tensiones inicial por gravedad está considerado.\n\n")
+
+            f.write("Desplazamientos verticales (uz) - INCREMENTALES:\n")
             f.write(f"   Máximo (asentamiento): {abs(desplazamientos.min()):.6f} m = {abs(desplazamientos.min())*1000:.3f} mm\n")
             f.write(f"   Mínimo: {desplazamientos.max():.6e} m\n")
             f.write(f"   Promedio: {desplazamientos.mean():.6e} m\n")
@@ -656,7 +704,7 @@ def main():
         print()
 
         # Fase 1: Gravedad
-        exito_gravedad = ejecutar_fase_gravedad(fuerzas_gravedad)
+        exito_gravedad, desplazamientos_gravedad = ejecutar_fase_gravedad(fuerzas_gravedad)
 
         if not exito_gravedad:
             print("\n❌ Fase de gravedad falló")
@@ -674,7 +722,7 @@ def main():
         print("\n" + "="*80)
         print("PASO 6: EXTRACCIÓN DE RESULTADOS")
         print("="*80)
-        output_dir = extraer_resultados(nodos)
+        output_dir = extraer_resultados(nodos, desplazamientos_gravedad=desplazamientos_gravedad)
 
         # Resumen final
         print("\n" + "="*80)
@@ -685,6 +733,20 @@ def main():
         print("   - desplazamientos.csv  (desplazamientos de todos los nodos)")
         print("   - reacciones.csv       (reacciones en apoyos)")
         print("   - estadisticas.txt     (resumen de resultados)")
+
+        print("\n" + "="*80)
+        print("⚠️  IMPORTANTE: INTERPRETACIÓN DE RESULTADOS")
+        print("="*80)
+        print("Los desplazamientos mostrados son SOLO los debidos a la carga de columna.")
+        print("Procedimiento usado:")
+        print("  1. Fase 1: Aplicar gravedad → establecer campo de tensiones inicial")
+        print("  2. Resetear desplazamientos a cero (mantiene tensiones)")
+        print("  3. Fase 2: Aplicar carga de columna → medir desplazamientos ADICIONALES")
+        print("\nPor lo tanto:")
+        print("  • Los resultados muestran asentamiento INCREMENTAL por carga de columna")
+        print("  • El campo de tensiones incluye el efecto de gravedad")
+        print("  • Este es el procedimiento estándar en análisis geotécnico")
+        print("="*80)
         print("\n🎉 ¡Análisis completado!\n")
 
     except Exception as e:
