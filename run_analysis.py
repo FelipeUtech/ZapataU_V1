@@ -201,6 +201,16 @@ def main():
                    mat_zapata['E'], mat_zapata['nu'], mat_zapata['rho'])
     print(f"✓ Material concreto (tag={mat_tag_zapata}): E={mat_zapata['E']/1e6:.0f} GPa, ν={mat_zapata['nu']}")
 
+    # Material "aire" (excavación) - tag después del concreto
+    # Solo se usa cuando Df > 0
+    if Df > 0:
+        mat_tag_aire = mat_tag_zapata + 1
+        E_aire = 1.0  # kPa - muy blando para simular vacío
+        nu_aire = 0.3
+        rho_aire = 0.001  # kg/m³ - muy ligero
+        ops.nDMaterial('ElasticIsotropic', mat_tag_aire, E_aire, nu_aire, rho_aire)
+        print(f"✓ Material aire/excavación (tag={mat_tag_aire}): E={E_aire} kPa (para Df={Df}m)")
+
     # Crear elementos de suelo (estratificado) y zapata
     print("\nCreando elementos...")
     n_elements_por_estrato, n_elements_zapata = utils.crear_elementos_con_zapata(

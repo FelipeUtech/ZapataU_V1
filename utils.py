@@ -337,6 +337,58 @@ def identificar_nodos_en_cota(node_coords, z_target, zapata, tolerancia=0.01):
     return nodos_encontrados
 
 
+def fijar_nodos_excavacion(node_coords, zapata, tolerancia=0.01):
+    """
+    Fija nodos que están en la zona de excavación (sin elementos).
+
+    Esto previene matriz singular cuando Df > 0, ya que los nodos en el hueco
+    no tienen elementos conectados.
+
+    Parameters:
+    -----------
+    node_coords : dict
+        Diccionario {node_tag: (x, y, z)}
+    zapata : dict
+        Parámetros de la zapata incluyendo B, L, h, Df
+    tolerancia : float
+        Tolerancia para comparaciones
+
+    Returns:
+    --------
+    int : Número de nodos fijados
+    """
+    B_zapata = zapata['B']
+    L_zapata = zapata['L']
+    h_zapata = zapata['h']
+    Df = zapata.get('Df', 0.0)
+
+    if Df <= tolerancia:
+        # No hay excavación, no hacer nada
+        return 0
+
+    # Zona de excavación: desde z=0 hasta z=-Df+h, dentro de área BxL
+    z_zapata_top = -Df + h_zapata
+    x_min = zapata.get('x_min', 0.0)
+    y_min = zapata.get('y_min', 0.0)
+    x_max = x_min + B_zapata
+    y_max = y_min + L_zapata
+
+    nodos_fijados = 0
+
+    for node_tag, (x, y, z) in node_coords.items():
+        # Verificar si está en zona de excavación (hueco)
+        # Usar < en lugar de <= para excluir nodos exactamente en los bordes
+        en_area_zapata = (x_min < x < x_max and y_min < y < y_max)
+        en_hueco = (z_zapata_top < z < 0)  # Excluir superficie (z=0) y tope de zapata
+
+        if en_area_zapata and en_hueco:
+            # Fijar completamente (estos nodos no tienen elementos)
+            ops.fix(node_tag, 1, 1, 1)
+            nodos_fijados += 1
+
+    return nodos_fijados
+
+
 def aplicar_condiciones_borde(n_layers, nodes_per_layer, nx, ny, usar_simetria=False):
     """
     Aplica condiciones de borde al modelo.
@@ -543,11 +595,13 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
                 #     tipo = 'HUECO' if es_hueco else ('ZAPATA' if es_zapata else 'SUELO')
                 #     print(f"  DEBUG [{tipo}]: z={z_elem:6.2f}, en_area_zapata={en_area_zapata}")
 
+                # NUEVO ENFOQUE: Crear elementos "aire" en excavación en lugar de eliminarlos
+                # Esto mantiene la conectividad de nodos y evita matriz singular
                 if es_hueco:
-                    # NO crear elemento en el hueco de excavación
-                    continue
-
-                if es_zapata:
+                    # Elementos de "aire" (material muy blando)
+                    mat_tag = mat_tag_zapata + 1  # Tag de material "aire"
+                    # Nota: Este material se define en run_analysis.py
+                elif es_zapata:
                     mat_tag = mat_tag_zapata
                     n_elements_zapata += 1
                 else:
