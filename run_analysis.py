@@ -102,51 +102,65 @@ def main():
                      'x_min': 0.0, 'y_min': 0.0}
 
     # -------------------------
-    # 3. GENERAR MALLA
+    # 3. GENERAR MALLA CON GMSH
     # -------------------------
     print("\n" + "="*80)
-    print("PASO 3: GENERANDO MALLA")
+    print("PASO 3: GENERANDO MALLA CON GMSH")
     print("="*80)
 
-    tipo_malla = malla_cfg['tipo']
-    print(f"Tipo de malla: {tipo_malla}")
+    print("Ejecutando generate_mesh_quarter.py...")
+    print("(Esto generará una malla tetraédrica con Gmsh)")
 
-    if tipo_malla == 'uniform':
-        # Malla uniforme
-        params = malla_cfg['uniform']
-        nx = int(Lx / params['dx'])
-        ny = int(Ly / params['dy'])
-        nz = int(Lz / params['dz'])
+    import subprocess
+    result = subprocess.run(
+        ['python3', 'generate_mesh_quarter.py'],
+        capture_output=True,
+        text=True,
+        timeout=300  # 5 minutos máximo
+    )
 
-        x_coords, y_coords, z_coords = utils.generar_malla_uniforme(dominio, nx, ny, nz)
-
-    elif tipo_malla == 'refined':
-        # Malla refinada
-        params = malla_cfg['refined']
-        x_coords, y_coords, z_coords = utils.generar_malla_refinada(
-            dominio, zapata_modelo, params)
-
-        nx = len(x_coords) - 1
-        ny = len(y_coords) - 1
-        nz = len(z_coords) - 1
-
-    elif tipo_malla == 'graded':
-        # Malla gradual
-        params = malla_cfg['graded']
-        x_coords, y_coords, z_coords = utils.generar_malla_gradual(
-            dominio, zapata_modelo, params)
-
-        nx = len(x_coords) - 1
-        ny = len(y_coords) - 1
-        nz = len(z_coords) - 1
-
-    else:
-        print(f"❌ Tipo de malla '{tipo_malla}' no reconocido")
+    if result.returncode != 0:
+        print(f"❌ Error al generar malla:")
+        print(result.stderr)
         sys.exit(1)
 
-    print(f"✓ Malla generada:")
-    print(f"  Elementos: {nx} × {ny} × {nz} = {nx*ny*nz}")
-    print(f"  Nodos: {len(x_coords)} × {len(y_coords)} × {len(z_coords)} = {len(x_coords)*len(y_coords)*len(z_coords)}")
+    # Mostrar salida del generador de malla
+    print(result.stdout)
+
+    # Leer malla generada desde archivo .vtu
+    import pyvista as pv
+    mesh_file = "mallas/zapata_3D_cuarto.vtu"
+
+    print(f"\nLeyendo malla desde {mesh_file}...")
+    grid = pv.read(mesh_file)
+
+    # Extraer información de la malla
+    points = grid.points
+    cells = grid.cells
+    material_ids = grid.cell_data.get('dominio', None)
+
+    # Contar elementos por tipo
+    num_elements = grid.n_cells
+    num_nodes = grid.n_points
+
+    print(f"✓ Malla cargada:")
+    print(f"  Nodos: {num_nodes:,}")
+    print(f"  Elementos tetraédricos: {num_elements:,}")
+
+    # Verificar que hay material_ids
+    if material_ids is None:
+        print("❌ Error: No se encontraron material_ids en la malla")
+        sys.exit(1)
+
+    # Mostrar distribución de materiales
+    unique_mats = np.unique(material_ids)
+    print(f"  Materiales encontrados: {unique_mats}")
+    for mat_id in unique_mats:
+        count = np.sum(material_ids == mat_id)
+        if mat_id == len(estratos_suelo) + 1:
+            print(f"    Material {mat_id} (ZAPATA): {count:,} elementos")
+        else:
+            print(f"    Material {mat_id} (ESTRATO {mat_id}): {count:,} elementos")
 
     # -------------------------
     # 4. CREAR MODELO EN OPENSEESPY
@@ -160,72 +174,131 @@ def main():
     ops.model('basic', '-ndm', 3, '-ndf', 3)
     print("✓ Modelo inicializado (3D, 3 DOF)")
 
-    # Crear nodos
+    # Crear nodos desde la malla de Gmsh
     print("\nCreando nodos...")
-    node_coords, surface_nodes = utils.crear_nodos(x_coords, y_coords, z_coords)
+    node_coords = {}
+    for node_id, (x, y, z) in enumerate(points, start=1):
+        ops.node(node_id, float(x), float(y), float(z))
+        node_coords[node_id] = np.array([x, y, z])
+
     print(f"✓ {len(node_coords)} nodos creados")
-    print(f"✓ {len(surface_nodes)} nodos en superficie")
+
+    # Identificar nodos en superficie (z máxima)
+    z_max = points[:, 2].max()
+    surface_nodes = [nid for nid, coords in node_coords.items() if abs(coords[2] - z_max) < 0.01]
+    print(f"✓ {len(surface_nodes)} nodos en superficie (z={z_max:.2f}m)")
 
     # Identificar nodos en el tope de la zapata
-    # CORRECTO: BASE en z=-Df, TOPE en z=-Df+h (donde se aplican cargas)
     Df = zapata['Df']
     h_zapata = zapata['h']
-    z_tope_zapata = -Df + h_zapata  # Tope de zapata (superficie superior)
-    zapata_nodes = utils.identificar_nodos_en_cota(node_coords, z_tope_zapata, zapata_modelo, tolerancia=0.05)
-    print(f"✓ {len(zapata_nodes)} nodos en tope de zapata (z={z_tope_zapata:.2f}m, Df={Df}m, base en z={-Df}m)")
+    z_tope_zapata = -Df + h_zapata  # Tope de zapata
+    z_base_zapata = -Df - h_zapata  # Base de zapata
+
+    # Límites de la zapata en planta (modelo 1/4)
+    x_min_zapata = x0 / 2
+    x_max_zapata = x0 / 2 + B_modelo / 2
+    y_min_zapata = y0 / 2
+    y_max_zapata = y0 / 2 + L_modelo / 2
+
+    zapata_nodes = []
+    for nid, coords in node_coords.items():
+        x, y, z = coords
+        # Nodo está en el tope de la zapata
+        if (abs(z - z_tope_zapata) < 0.1 and
+            x_min_zapata <= x <= x_max_zapata and
+            y_min_zapata <= y <= y_max_zapata):
+            zapata_nodes.append(nid)
+
+    print(f"✓ {len(zapata_nodes)} nodos en tope de zapata (z≈{z_tope_zapata:.2f}m)")
 
     # Aplicar condiciones de borde
     print("\nAplicando condiciones de borde...")
-    nodes_per_layer = (nx + 1) * (ny + 1)
-    utils.aplicar_condiciones_borde(nz + 1, nodes_per_layer, nx, ny, usar_cuarto)
-    print("✓ Condiciones de borde aplicadas")
+
+    # Fondo: empotrado (z mínima)
+    z_min = points[:, 2].min()
+    fixed_nodes = [nid for nid, coords in node_coords.items() if abs(coords[2] - z_min) < 0.01]
+    for nid in fixed_nodes:
+        ops.fix(nid, 1, 1, 1)
+    print(f"  ✓ {len(fixed_nodes)} nodos fijados en fondo (z={z_min:.2f}m)")
+
+    # Planos de simetría (modelo 1/4)
+    if usar_cuarto:
+        # Plano x=0: desplazamiento en X = 0
+        x_min_tol = points[:, 0].min()
+        x_symmetry_nodes = [nid for nid, coords in node_coords.items() if abs(coords[0] - x_min_tol) < 0.01]
+        for nid in x_symmetry_nodes:
+            if nid not in fixed_nodes:  # No re-aplicar si ya está fijado
+                ops.fix(nid, 1, 0, 0)
+        print(f"  ✓ {len(x_symmetry_nodes)} nodos en plano X=0 (simetría)")
+
+        # Plano y=0: desplazamiento en Y = 0
+        y_min_tol = points[:, 1].min()
+        y_symmetry_nodes = [nid for nid, coords in node_coords.items() if abs(coords[1] - y_min_tol) < 0.01]
+        for nid in y_symmetry_nodes:
+            if nid not in fixed_nodes:
+                ops.fix(nid, 0, 1, 0)
+        print(f"  ✓ {len(y_symmetry_nodes)} nodos en plano Y=0 (simetría)")
 
     # Definir materiales
     print("\nDefiniendo materiales...")
 
     # Materiales de estratos de suelo
-    estratos_con_tags = []
     for i, estrato in enumerate(estratos_suelo, 1):
         mat_tag = i
         ops.nDMaterial('ElasticIsotropic', mat_tag,
                        estrato['E'], estrato['nu'], estrato['rho'])
-        print(f"✓ {estrato['nombre']} (tag={mat_tag}): E={estrato['E']/1000:.0f} MPa, espesor={estrato['espesor']}m")
-        estratos_con_tags.append({
-            'espesor': estrato['espesor'],
-            'mat_tag': mat_tag
-        })
+        print(f"✓ {estrato['nombre']} (tag={mat_tag}): E={estrato['E']/1000:.0f} MPa")
 
-    # Material concreto (zapata) - tag después de los estratos
+    # Material concreto (zapata)
     mat_tag_zapata = len(estratos_suelo) + 1
     ops.nDMaterial('ElasticIsotropic', mat_tag_zapata,
                    mat_zapata['E'], mat_zapata['nu'], mat_zapata['rho'])
-    print(f"✓ Material concreto (tag={mat_tag_zapata}): E={mat_zapata['E']/1e6:.0f} GPa, ν={mat_zapata['nu']}")
+    print(f"✓ Material concreto (tag={mat_tag_zapata}): E={mat_zapata['E']/1e6:.0f} GPa")
 
-    # Material "aire" para excavación - tag después del concreto
-    # Muy blando para simular zona sin suelo (cuando Df > 0)
-    if Df > 0.01:
-        mat_tag_aire = mat_tag_zapata + 1
-        E_aire = 1.0  # kPa - muy blando
-        nu_aire = 0.3
-        rho_aire = 0.001  # kg/m³ - muy ligero
-        ops.nDMaterial('ElasticIsotropic', mat_tag_aire, E_aire, nu_aire, rho_aire)
-        print(f"✓ Material excavación/aire (tag={mat_tag_aire}): E={E_aire} kPa (Df={Df}m)")
+    # Crear elementos tetraédricos
+    print("\nCreando elementos tetraédricos...")
 
-    # Crear elementos de suelo (estratificado) y zapata
-    # NOTA: Se crean elementos "aire" en excavación que el visualizador filtrará
-    print("\nCreando elementos...")
-    n_elements_por_estrato, n_elements_zapata = utils.crear_elementos_con_zapata(
-        nx, ny, nz, nodes_per_layer, x_coords, y_coords, z_coords,
-        zapata_modelo, mat_tag_zapata=mat_tag_zapata, estratos_suelo=estratos_con_tags
-    )
+    # Extraer conectividad de tetraedros
+    # En PyVista, cells tiene formato: [n_points, p0, p1, ..., n_points, p0, p1, ...]
+    element_id = 1
+    cell_idx = 0
+    element_counts = {mat_id: 0 for mat_id in unique_mats}
 
-    # Reportar elementos por estrato
-    total_suelo = 0
-    for i, (estrato, n_elem) in enumerate(zip(estratos_suelo, n_elements_por_estrato), 1):
-        print(f"✓ {estrato['nombre']}: {n_elem} elementos")
-        total_suelo += n_elem
-    print(f"✓ Zapata rígida: {n_elements_zapata} elementos")
-    print(f"✓ Total: {total_suelo + n_elements_zapata} elementos")
+    while cell_idx < len(cells):
+        n_points = cells[cell_idx]
+        if n_points != 4:
+            print(f"⚠️  Advertencia: Elemento con {n_points} nodos (esperado 4)")
+            cell_idx += n_points + 1
+            continue
+
+        # Nodos del tetraedro (PyVista usa indexación 0-based, OpenSees usa 1-based)
+        n1 = int(cells[cell_idx + 1]) + 1
+        n2 = int(cells[cell_idx + 2]) + 1
+        n3 = int(cells[cell_idx + 3]) + 1
+        n4 = int(cells[cell_idx + 4]) + 1
+
+        # Material del elemento
+        mat_id = int(material_ids[element_id - 1])
+
+        # Crear elemento en OpenSees
+        ops.element('FourNodeTetrahedron', element_id, n1, n2, n3, n4, mat_id)
+
+        element_counts[mat_id] += 1
+        element_id += 1
+        cell_idx += n_points + 1
+
+    total_elements = element_id - 1
+    print(f"✓ {total_elements:,} elementos tetraédricos creados")
+
+    # Reportar por material
+    for mat_id in sorted(element_counts.keys()):
+        count = element_counts[mat_id]
+        if mat_id == mat_tag_zapata:
+            print(f"  Material {mat_id} (ZAPATA): {count:,} elementos")
+        else:
+            estrato_idx = mat_id - 1
+            if 0 <= estrato_idx < len(estratos_suelo):
+                print(f"  Material {mat_id} ({estratos_suelo[estrato_idx]['nombre']}): {count:,} elementos")
 
     # -------------------------
     # 5. APLICAR CARGAS
@@ -243,15 +316,44 @@ def main():
         P_column = P_column / 4.0
         print(f"Modelo 1/4: Carga ajustada a {P_column:.2f} kN")
 
-    carga_total = utils.aplicar_cargas(
-        zapata_nodes, P_column, zapata, mat_zapata,
-        cargas['incluir_peso_propio']
-    )
+    # Calcular peso propio de la zapata
+    peso_zapata = 0.0
+    if cargas['incluir_peso_propio']:
+        # Volumen de la zapata (modelo 1/4)
+        vol_zapata = (B_modelo / 2) * (L_modelo / 2) * h_zapata
+        peso_zapata = vol_zapata * mat_zapata['rho'] * 9.81 / 1000.0  # kN
+        print(f"Peso propio zapata: {peso_zapata:.2f} kN")
 
-    print(f"✓ Carga total aplicada: {carga_total:.2f} kN")
-    print(f"  Carga columna: {P_column:.2f} kN")
-    print(f"  Peso zapata: {carga_total - P_column:.2f} kN")
-    print(f"  Nodos cargados: {len(zapata_nodes)}")
+    # Carga total
+    carga_total = P_column + peso_zapata
+
+    # Distribuir carga entre nodos del tope de zapata
+    if len(zapata_nodes) == 0:
+        print("⚠️  Advertencia: No se encontraron nodos en el tope de la zapata")
+        print("    Aplicando carga en nodos de superficie dentro de área de zapata")
+
+        # Buscar nodos de superficie en área de zapata
+        for nid in surface_nodes:
+            coords = node_coords[nid]
+            x, y = coords[0], coords[1]
+            if (x_min_zapata <= x <= x_max_zapata and
+                y_min_zapata <= y <= y_max_zapata):
+                zapata_nodes.append(nid)
+
+    if len(zapata_nodes) > 0:
+        carga_por_nodo = -carga_total / len(zapata_nodes)  # Negativa (hacia abajo)
+
+        for nid in zapata_nodes:
+            ops.load(nid, 0.0, 0.0, carga_por_nodo)
+
+        print(f"✓ Carga total aplicada: {carga_total:.2f} kN")
+        print(f"  Carga columna: {P_column:.2f} kN")
+        print(f"  Peso zapata: {peso_zapata:.2f} kN")
+        print(f"  Nodos cargados: {len(zapata_nodes)}")
+        print(f"  Carga por nodo: {carga_por_nodo:.4f} kN")
+    else:
+        print("❌ Error: No se pudieron identificar nodos para aplicar cargas")
+        sys.exit(1)
 
     # Calcular presión
     area_zapata = zapata['B'] * zapata['L']

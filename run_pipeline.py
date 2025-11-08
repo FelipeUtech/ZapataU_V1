@@ -81,38 +81,36 @@ def sync_config():
 
 
 def generate_mesh(config_file):
-    """Genera malla usando GMSH."""
+    """Genera malla usando GMSH con generate_mesh_quarter.py."""
     print_step(2, 5, "Generando malla con GMSH")
 
-    if not Path("generate_mesh_from_config.py").exists():
-        print("❌ generate_mesh_from_config.py no encontrado!")
+    if not Path("generate_mesh_quarter.py").exists():
+        print("❌ generate_mesh_quarter.py no encontrado!")
         return False
 
+    print("ℹ️  Usando generate_mesh_quarter.py (lee parámetros desde config.py)")
+
     return run_command(
-        ["python3", "generate_mesh_from_config.py", config_file],
-        "Generando malla tetraédrica 3D"
+        ["python3", "generate_mesh_quarter.py"],
+        "Generando malla tetraédrica 3D - modelo 1/4"
     )
 
 
 def get_mesh_filename(config_file):
     """Obtiene nombre del archivo de malla desde configuración."""
-    try:
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-        base_name = config['output']['filename']
-        formats = config['output']['formats']
+    # generate_mesh_quarter.py siempre genera estos archivos fijos
+    base_name = "zapata_3D_cuarto"
 
-        # Preferir VTU, luego MSH
-        if 'vtu' in formats:
-            return f"mallas/{base_name}.vtu"
-        elif 'msh' in formats:
-            return f"mallas/{base_name}.msh"
-        else:
-            print(f"⚠️  No se encontró formato VTU o MSH en config")
-            return None
+    # Verificar qué archivo existe
+    vtu_path = f"mallas/{base_name}.vtu"
+    msh_path = f"mallas/{base_name}.msh"
 
-    except Exception as e:
-        print(f"⚠️  Error leyendo configuración: {e}")
+    if Path(vtu_path).exists():
+        return vtu_path
+    elif Path(msh_path).exists():
+        return msh_path
+    else:
+        print(f"⚠️  No se encontró archivo de malla en mallas/")
         return None
 
 
