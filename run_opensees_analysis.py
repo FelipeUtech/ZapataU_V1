@@ -528,12 +528,92 @@ def ejecutar_fase_carga():
         return False
 
 
-def extraer_resultados(nodos_dict, desplazamientos_gravedad=None, output_dir="resultados_opensees"):
+def extraer_tensiones_elementos(elementos_list, output_dir="resultados_opensees"):
     """
-    Extrae resultados de desplazamientos y reacciones.
+    Extrae tensiones y deformaciones de elementos.
+
+    Args:
+        elementos_list: Lista de elementos con tags y conectividad
+        output_dir: Directorio de salida
+
+    Returns:
+        dict: Diccionario con tensiones por elemento {elem_tag: {...}}
+    """
+    print("\n🔬 Extrayendo tensiones de elementos...")
+
+    output_path = Path(output_dir)
+    tensiones_file = output_path / "tensiones.csv"
+
+    tensiones_dict = {}
+    count_success = 0
+    count_fail = 0
+
+    with open(tensiones_file, 'w') as f:
+        f.write("# Tensiones en elementos (en kPa)\n")
+        f.write("# elem,sxx,syy,szz,sxy,syz,szx,von_mises\n")
+
+        for elem in elementos_list:
+            elem_tag = elem['tag']
+
+            try:
+                # Obtener tensiones del elemento
+                # eleResponse devuelve: [σxx, σyy, σzz, τxy, τyz, τzx]
+                stresses = ops.eleResponse(elem_tag, 'stresses')
+
+                if len(stresses) >= 6:
+                    sxx, syy, szz, sxy, syz, szx = stresses[:6]
+
+                    # Calcular tensión de von Mises
+                    # σ_vm = sqrt(0.5*[(σxx-σyy)² + (σyy-σzz)² + (σzz-σxx)² + 6*(τxy² + τyz² + τzx²)])
+                    diff1 = sxx - syy
+                    diff2 = syy - szz
+                    diff3 = szz - sxx
+                    von_mises = np.sqrt(0.5 * (diff1**2 + diff2**2 + diff3**2) +
+                                       3.0 * (sxy**2 + syz**2 + szx**2))
+
+                    # Guardar en diccionario
+                    tensiones_dict[elem_tag] = {
+                        'sxx': sxx,
+                        'syy': syy,
+                        'szz': szz,
+                        'sxy': sxy,
+                        'syz': syz,
+                        'szx': szx,
+                        'von_mises': von_mises
+                    }
+
+                    # Escribir a archivo
+                    f.write(f"{elem_tag},{sxx:.6e},{syy:.6e},{szz:.6e},"
+                           f"{sxy:.6e},{syz:.6e},{szx:.6e},{von_mises:.6e}\n")
+
+                    count_success += 1
+                else:
+                    count_fail += 1
+
+            except Exception as e:
+                count_fail += 1
+                # Silencioso - algunos elementos pueden no tener datos
+
+    print(f"   ✅ Tensiones guardadas: {tensiones_file}")
+    print(f"   📊 Elementos procesados: {count_success}/{len(elementos_list)}")
+
+    if count_fail > 0:
+        print(f"   ⚠️  Elementos sin datos: {count_fail}")
+
+    if tensiones_dict:
+        von_mises_values = [t['von_mises'] for t in tensiones_dict.values()]
+        print(f"   📈 Tensión de von Mises máxima: {max(von_mises_values):.2f} kPa")
+
+    return tensiones_dict
+
+
+def extraer_resultados(nodos_dict, elementos_list, desplazamientos_gravedad=None, output_dir="resultados_opensees"):
+    """
+    Extrae resultados de desplazamientos, reacciones y tensiones.
 
     Args:
         nodos_dict: Diccionario de nodos {tag: (x, y, z)}
+        elementos_list: Lista de elementos para extraer tensiones
         desplazamientos_gravedad: Desplazamientos de fase de gravedad para restar
         output_dir: Directorio de salida
     """
@@ -593,6 +673,9 @@ def extraer_resultados(nodos_dict, desplazamientos_gravedad=None, output_dir="re
                 pass  # Nodo sin reacciones
 
     print(f"   ✅ Reacciones guardadas: {react_file}")
+
+    # Extraer tensiones de elementos
+    extraer_tensiones_elementos(elementos_list, output_dir=output_dir)
 
     # Estadísticas de desplazamientos (incrementales)
     desplazamientos = []
@@ -722,7 +805,7 @@ def main():
         print("\n" + "="*80)
         print("PASO 6: EXTRACCIÓN DE RESULTADOS")
         print("="*80)
-        output_dir = extraer_resultados(nodos, desplazamientos_gravedad=desplazamientos_gravedad)
+        output_dir = extraer_resultados(nodos, elementos, desplazamientos_gravedad=desplazamientos_gravedad)
 
         # Resumen final
         print("\n" + "="*80)
@@ -732,7 +815,10 @@ def main():
         print("\nArchivos generados:")
         print("   - desplazamientos.csv  (desplazamientos de todos los nodos)")
         print("   - reacciones.csv       (reacciones en apoyos)")
+        print("   - tensiones.csv        (tensiones en elementos)")
         print("   - estadisticas.txt     (resumen de resultados)")
+        print("\n💡 Para visualizar resultados:")
+        print("   python visualizar_resultados_opensees.py")
 
         print("\n" + "="*80)
         print("⚠️  IMPORTANTE: INTERPRETACIÓN DE RESULTADOS")
