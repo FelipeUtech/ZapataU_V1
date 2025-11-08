@@ -790,6 +790,7 @@ info_text = f"""
 📐 GEOMETRÍA:
    • Dominio: {Lx_quarter:.1f}m × {Ly_quarter:.1f}m × {Lz_soil:.1f}m
    • Zapata: {B_quarter:.2f}m × {L_quarter:.2f}m × {h_zapata:.2f}m
+   • Profundidad desplante (Df): {Df:.2f}m
    • Modelo: 1/4 con simetría
 
 🔲 MALLA:
