@@ -3,22 +3,22 @@ REPORTE DE ANÁLISIS DE ZAPATA
 ================================================================================
 
 MODELO:
-  Zapata: 3.0m × 3.0m × 0.4m
-  Dominio: 9.0m × 9.0m × 20.0m
+  Zapata: 2.0m × 3.0m × 0.4m
+  Dominio: 3.0m × 4.5m × Nonem
   Modelo: Cuarto con simetría
-  Malla: graded
-  Elementos: 12 × 12 × 20 = 2862
-  Nodos: 3549
+  Malla: GMSH Tetraédrica
+  Elementos: 4630 elementos tetraédricos
+  Nodos: 378
   Estratos suelo: Estrato 1 (E=5 MPa, h=3.0m), Estrato 2 (E=20 MPa, h=10.0m), Estrato 3 (E=50 MPa, h=7.0m)
-  Carga total: 334.76 kN
-  Presión contacto: 148.78 kPa
+  Carga total: 253.53 kN
+  Presión contacto: 169.02 kPa
 
 RESULTADOS:
-  Asentamiento máximo: 24.7785 mm
-  Asentamiento mínimo: 0.3319 mm
-  Asentamiento promedio: 5.1049 mm
-  Desviación estándar: 6.6006 mm
-  Diferencial: 24.4467 mm
-  Relación diferencial: 0.9866
+  Asentamiento máximo: 4040013655197753.0000 mm
+  Asentamiento mínimo: 4040013655197608.0000 mm
+  Asentamiento promedio: 4040013655197643.5000 mm
+  Desviación estándar: 28.8914 mm
+  Diferencial: 145.0000 mm
+  Relación diferencial: 0.0000
 
 ================================================================================

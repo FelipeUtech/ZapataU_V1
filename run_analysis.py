@@ -195,10 +195,11 @@ def main():
     z_base_zapata = -Df - h_zapata  # Base de zapata
 
     # Límites de la zapata en planta (modelo 1/4)
-    x_min_zapata = x0 / 2
-    x_max_zapata = x0 / 2 + B_modelo / 2
-    y_min_zapata = y0 / 2
-    y_max_zapata = y0 / 2 + L_modelo / 2
+    # Para modelo 1/4, la zapata empieza en el origen (0, 0)
+    x_min_zapata = 0.0
+    x_max_zapata = B_modelo / 2
+    y_min_zapata = 0.0
+    y_max_zapata = L_modelo / 2
 
     zapata_nodes = []
     for nid, coords in node_coords.items():
@@ -460,8 +461,8 @@ def main():
             'Zapata': f"{zapata['B']}m × {zapata['L']}m × {zapata['h']}m",
             'Dominio': f"{Lx}m × {Ly}m × {Lz}m",
             'Modelo': 'Cuarto con simetría' if usar_cuarto else 'Completo',
-            'Malla': tipo_malla,
-            'Elementos': f"{nx} × {ny} × {nz} = {total_suelo + n_elements_zapata}",
+            'Malla': 'GMSH Tetraédrica',
+            'Elementos': f"{len(cells)} elementos tetraédricos",
             'Nodos': len(node_coords),
             'Estratos suelo': estratos_desc,
             'Carga total': f"{carga_total:.2f} kN",
