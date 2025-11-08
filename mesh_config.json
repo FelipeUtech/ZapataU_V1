@@ -1,15 +1,15 @@
 {
   "geometry": {
     "domain": {
-      "Lx": 6.0,
-      "Ly": 6.0,
-      "Lz": 10.0,
+      "Lx": 8.0,
+      "Ly": 8.0,
+      "Lz": 15.0,
       "quarter_domain": true
     },
     "footing": {
-      "B": 3.0,
-      "Df": 1.5,
-      "tz": 0.5
+      "B": 2.0,
+      "Df": 1.2,
+      "tz": 0.4
     }
   },
   "soil_layers": [
@@ -21,13 +21,13 @@
     },
     {
       "name": "SOIL_2",
-      "thickness": 4.0,
+      "thickness": 5.0,
       "material_id": 2,
       "description": "Capa intermedia de suelo"
     },
     {
       "name": "SOIL_3",
-      "thickness": 1.0,
+      "thickness": 5.0,
       "material_id": 3,
       "description": "Capa inferior de suelo"
     }
