@@ -51,11 +51,15 @@ def extract_mesh_data(mesh):
     cells = []
     cell_materials = []
 
-    # Obtener material_id si existe
-    if 'material_id' in mesh.cell_data:
+    # Obtener material_id si existe (campo 'dominio' o 'material_id')
+    if 'dominio' in mesh.cell_data:
+        materials = mesh.cell_data['dominio']
+        print("✓ Usando campo 'dominio' como material_id")
+    elif 'material_id' in mesh.cell_data:
         materials = mesh.cell_data['material_id']
+        print("✓ Usando campo 'material_id'")
     else:
-        print("⚠️  Advertencia: No se encontró 'material_id', usando material 1 para todos")
+        print("⚠️  Advertencia: No se encontró 'dominio' ni 'material_id', usando material 1 para todos")
         materials = np.ones(mesh.n_cells, dtype=int)
 
     # Extraer conectividad de elementos
