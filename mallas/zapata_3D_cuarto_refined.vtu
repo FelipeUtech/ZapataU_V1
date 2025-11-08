@@ -4,8 +4,8 @@
     <Piece NumberOfPoints="2109" NumberOfCells="8636">
       <PointData>
       </PointData>
-      <CellData Scalars="material_id">
-        <DataArray type="Int64" Name="material_id" format="binary" RangeMin="1" RangeMax="4">
+      <CellData Scalars="dominio">
+        <DataArray type="Int64" Name="dominio" format="binary" RangeMin="1" RangeMax="4">
           AwAAAACAAADgDQAASQAAAFMAAAAhAAAAeJztxTEBAAAMAqDZv/QOYwgPuYpt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt28M//AAQAXic7cWxDQAgCAAwQP6/2cHZ1UTSLs040rZt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Zt27Ztj7ts27Zt2/b1Zdv+4rZt27YfvgEIShdEeJztxaENAAAMArAJ/r95gitIWtNcxbZt27Y9/QNNcAbx
         </DataArray>
       </CellData>
