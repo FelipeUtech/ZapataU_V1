@@ -1,0 +1,44 @@
+# ZapataU_V1 - Análisis de Fundaciones con OpenSees
+# Archivo de dependencias de Python
+#
+# IMPORTANTE: Usar Python 3.9, 3.10 o 3.11 (NO 3.12+)
+#
+# Instalación:
+#   pip install -r requirements.txt
+#
+# Si tienes problemas en Linux, primero ejecuta:
+#   sudo apt install build-essential gfortran liblapack-dev libblas-dev libopenblas-dev tcl-dev tk-dev
+
+# Computación numérica básica (DEBE instalarse primero)
+numpy==1.24.3
+
+# OpenSees - Análisis de elementos finitos
+# NOTA: Versión crítica, puede requerir dependencias del sistema
+openseespy==3.5.1.11
+
+# GMSH - Generación de mallas
+gmsh==4.11.1
+
+# PyVista - Visualización 3D y exportación VTU
+pyvista==0.43.0
+
+# meshio - Conversión entre formatos de malla
+meshio==5.3.4
+
+# Matplotlib - Gráficos 2D
+matplotlib==3.7.1
+
+# SciPy - Computación científica
+scipy==1.10.1
+
+# Pandas - Análisis de datos (opcional)
+pandas==2.0.3
+
+# Dependencias adicionales para visualización
+# (instaladas automáticamente por pyvista, pero listadas explícitamente)
+vtk==9.2.6
+pillow==10.0.0
+imageio==2.31.1
+
+# Utilidades
+pathlib2==2.3.7; python_version < '3.4'
