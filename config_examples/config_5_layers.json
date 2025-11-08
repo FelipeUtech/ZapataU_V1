@@ -1,0 +1,63 @@
+{
+  "geometry": {
+    "domain": {
+      "Lx": 10.0,
+      "Ly": 10.0,
+      "Lz": 15.0,
+      "quarter_domain": true
+    },
+    "footing": {
+      "B": 4.0,
+      "Df": 2.0,
+      "tz": 0.6
+    }
+  },
+  "soil_layers": [
+    {
+      "name": "RELLENO",
+      "thickness": 2.0,
+      "material_id": 1,
+      "description": "Relleno compactado"
+    },
+    {
+      "name": "ARENA_FINA",
+      "thickness": 3.0,
+      "material_id": 2,
+      "description": "Arena fina media densa"
+    },
+    {
+      "name": "ARCILLA_BLANDA",
+      "thickness": 4.0,
+      "material_id": 3,
+      "description": "Arcilla blanda saturada"
+    },
+    {
+      "name": "ARENA_GRUESA",
+      "thickness": 4.0,
+      "material_id": 4,
+      "description": "Arena gruesa densa"
+    },
+    {
+      "name": "ROCA_METEORIZADA",
+      "thickness": 2.0,
+      "material_id": 5,
+      "description": "Roca meteorizada"
+    }
+  ],
+  "footing_material": {
+    "name": "FOOTING",
+    "material_id": 100,
+    "description": "Zapata de concreto"
+  },
+  "mesh_refinement": {
+    "lc_footing": 0.2,
+    "lc_near": 0.4,
+    "lc_far": 1.5,
+    "growth_rate": 1.35,
+    "optimize_netgen": true
+  },
+  "output": {
+    "filename": "zapata_5_layers",
+    "formats": ["msh", "vtu", "xdmf"]
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "geometry": {
+    "domain": {
+      "Lx": 8.0,
+      "Ly": 8.0,
+      "Lz": 6.0,
+      "quarter_domain": true
+    },
+    "footing": {
+      "B": 2.5,
+      "Df": 1.0,
+      "tz": 0.4
+    }
+  },
+  "soil_layers": [
+    {
+      "name": "SOIL_SUPERFICIAL",
+      "thickness": 3.0,
+      "material_id": 1,
+      "description": "Arena limosa superficial"
+    },
+    {
+      "name": "SOIL_PROFUNDO",
+      "thickness": 3.0,
+      "material_id": 2,
+      "description": "Arcilla rígida"
+    }
+  ],
+  "footing_material": {
+    "name": "CONCRETO",
+    "material_id": 10,
+    "description": "Zapata de concreto armado"
+  },
+  "mesh_refinement": {
+    "lc_footing": 0.12,
+    "lc_near": 0.25,
+    "lc_far": 1.0,
+    "growth_rate": 1.4,
+    "optimize_netgen": true
+  },
+  "output": {
+    "filename": "zapata_2_layers",
+    "formats": ["msh", "vtu", "xdmf"]
+  }
+}

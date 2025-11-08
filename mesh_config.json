@@ -1,0 +1,51 @@
+{
+  "geometry": {
+    "domain": {
+      "Lx": 6.0,
+      "Ly": 6.0,
+      "Lz": 10.0,
+      "quarter_domain": true
+    },
+    "footing": {
+      "B": 3.0,
+      "Df": 1.5,
+      "tz": 0.5
+    }
+  },
+  "soil_layers": [
+    {
+      "name": "SOIL_1",
+      "thickness": 5.0,
+      "material_id": 1,
+      "description": "Capa superior de suelo"
+    },
+    {
+      "name": "SOIL_2",
+      "thickness": 4.0,
+      "material_id": 2,
+      "description": "Capa intermedia de suelo"
+    },
+    {
+      "name": "SOIL_3",
+      "thickness": 1.0,
+      "material_id": 3,
+      "description": "Capa inferior de suelo"
+    }
+  ],
+  "footing_material": {
+    "name": "FOOTING",
+    "material_id": 4,
+    "description": "Zapata de concreto"
+  },
+  "mesh_refinement": {
+    "lc_footing": 0.15,
+    "lc_near": 0.3,
+    "lc_far": 1.2,
+    "growth_rate": 1.3,
+    "optimize_netgen": true
+  },
+  "output": {
+    "filename": "zapata_3D_cuarto_refined",
+    "formats": ["msh", "vtu", "xdmf"]
+  }
+}
