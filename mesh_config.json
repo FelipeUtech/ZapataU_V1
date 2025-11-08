@@ -1,11 +1,11 @@
 {
   "geometry": {
     "domain": {
-      "Lx": 24.0,
-      "Ly": 24.0,
+      "Lx": 15.0,
+      "Ly": 15.0,
       "Lz": 20.0,
       "quarter_domain": true,
-      "_comment": "Lx=Ly calculado como 8×max(B,L)=8×3.0=24.0m, Lz=suma de estratos=20.0m"
+      "_comment": "Lx=Ly calculado como 5×max(B,L)=5×3.0=15.0m, Lz=suma de estratos=20.0m"
     },
     "footing": {
       "B": 2.0,
@@ -41,8 +41,8 @@
     "description": "Zapata de concreto"
   },
   "mesh_refinement": {
-    "lc_footing": 0.5,
-    "lc_near": 0.75,
+    "lc_footing": 0.4,
+    "lc_near": 0.6000000000000001,
     "lc_far": 2.0,
     "growth_rate": 1.2,
     "optimize_netgen": true
