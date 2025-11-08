@@ -336,10 +336,44 @@ if np.sum(idx_y0) > 2:  # Necesitamos al menos 3 puntos
                      alpha=0.8, rstride=1, cstride=1,
                      linewidth=0, antialiased=True, shade=True, edgecolor='none')
 
-# ZAPATA (considerando profundidad de desplante Df)
-# CORRECTO: BASE en z=-Df, TOPE en z=-Df+h
+# EXCAVACIÓN / HUECO (si Df > 0)
+# Mostrar el hueco desde z=0 (superficie) hasta z=zapata_top (tope de zapata)
 zapata_z_base = -Df
 zapata_z_top = -Df + h_zapata
+
+if Df > 0.01:  # Si hay excavación significativa
+    # Dibujar hueco de excavación (desde superficie hasta tope de zapata)
+    hueco_corners = [
+        [0, 0, 0], [B_quarter, 0, 0],
+        [B_quarter, L_quarter, 0], [0, L_quarter, 0],
+        [0, 0, zapata_z_top], [B_quarter, 0, zapata_z_top],
+        [B_quarter, L_quarter, zapata_z_top], [0, L_quarter, zapata_z_top]
+    ]
+
+    # Solo dibujar las caras exteriores (bordes) del hueco para que se vea
+    hueco_faces = [
+        # Cara frontal (Y=0)
+        [hueco_corners[0], hueco_corners[1], hueco_corners[5], hueco_corners[4]],
+        # Cara lateral derecha (X=B)
+        [hueco_corners[1], hueco_corners[2], hueco_corners[6], hueco_corners[5]],
+    ]
+
+    hueco_collection = Poly3DCollection(hueco_faces, alpha=0.3,
+                                         facecolor='lightgray', edgecolor='gray',
+                                         linewidth=2, linestyle='--')
+    ax1.add_collection3d(hueco_collection)
+
+    # Dibujar borde superior del hueco (en superficie z=0)
+    hueco_borde_superior = [
+        [hueco_corners[0], hueco_corners[1], hueco_corners[2], hueco_corners[3]]
+    ]
+    hueco_borde_collection = Poly3DCollection(hueco_borde_superior, alpha=0.15,
+                                               facecolor='white', edgecolor='red',
+                                               linewidth=2.5, linestyle='-')
+    ax1.add_collection3d(hueco_borde_collection)
+
+# ZAPATA (considerando profundidad de desplante Df)
+# CORRECTO: BASE en z=-Df, TOPE en z=-Df+h
 zapata_corners = [
     [0, 0, zapata_z_top], [B_quarter, 0, zapata_z_top],
     [B_quarter, L_quarter, zapata_z_top], [0, L_quarter, zapata_z_top],
@@ -356,8 +390,8 @@ zapata_faces = [
     [zapata_corners[1], zapata_corners[2], zapata_corners[6], zapata_corners[5]]
 ]
 
-zapata_collection = Poly3DCollection(zapata_faces, alpha=0.7,
-                                     facecolor='orange', edgecolor='darkorange', linewidth=2)
+zapata_collection = Poly3DCollection(zapata_faces, alpha=0.8,
+                                     facecolor='orange', edgecolor='darkorange', linewidth=2.5)
 ax1.add_collection3d(zapata_collection)
 
 # Configuración de ejes
@@ -381,15 +415,27 @@ cbar_iso.set_label('Asentamiento (mm)', fontsize=11, fontweight='bold')
 cbar_iso.ax.tick_params(labelsize=9)
 
 # Anotaciones mejoradas
-ax1.text2D(0.02, 0.98, '🟧 ZAPATA\n1.5×1.5m\nh=0.6m', transform=ax1.transAxes,
+zapata_label = f'🟧 ZAPATA\n{B_quarter:.1f}×{L_quarter:.1f}m\nh={h_zapata:.2f}m'
+if Df > 0.01:
+    zapata_label += f'\nDf={Df:.2f}m'
+ax1.text2D(0.02, 0.98, zapata_label, transform=ax1.transAxes,
            fontsize=10, verticalalignment='top', fontweight='bold',
            bbox=dict(boxstyle='round,pad=0.5', facecolor='orange', alpha=0.8, edgecolor='darkorange', linewidth=2))
 
-ax1.text2D(0.02, 0.82, '📐 Plano X=0\n(Simetría Y-Z)', transform=ax1.transAxes,
+# Anotación del hueco si Df > 0
+y_offset = 0.82
+if Df > 0.01:
+    hueco_depth = abs(zapata_z_top)  # Profundidad del hueco desde superficie
+    ax1.text2D(0.02, y_offset, f'⬜ EXCAVACIÓN\nProf: {hueco_depth:.2f}m', transform=ax1.transAxes,
+               fontsize=9, verticalalignment='top',
+               bbox=dict(boxstyle='round,pad=0.4', facecolor='lightgray', alpha=0.7, edgecolor='red', linewidth=1.5))
+    y_offset -= 0.16
+
+ax1.text2D(0.02, y_offset, '📐 Plano X=0\n(Simetría Y-Z)', transform=ax1.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round,pad=0.4', facecolor='cyan', alpha=0.7, edgecolor='blue', linewidth=1.5))
 
-ax1.text2D(0.02, 0.68, '📐 Plano Y=0\n(Simetría X-Z)', transform=ax1.transAxes,
+ax1.text2D(0.02, y_offset - 0.14, '📐 Plano Y=0\n(Simetría X-Z)', transform=ax1.transAxes,
            fontsize=9, verticalalignment='top',
            bbox=dict(boxstyle='round,pad=0.4', facecolor='yellow', alpha=0.7, edgecolor='orange', linewidth=1.5))
 
