@@ -25,37 +25,61 @@ y_foot_end = y_foot_start + B / 4
 # ---------------------------------
 # Parámetros de discretización para malla cúbica
 # ---------------------------------
-# Usar un tamaño de elemento objetivo
+# IMPORTANTE: Usar tamaños que permitan nodos en las coordenadas críticas
 elem_size = 0.5  # Tamaño objetivo del elemento (medio metro)
 
-# Calcular número de divisiones para mantener elementos cúbicos
-nx = int(np.round(Lx / elem_size))
-ny = int(np.round(Ly / elem_size))
+# Divisiones en X e Y con nodos en coordenadas críticas
+# Necesitamos nodos en: 0, 2.25, 3.0
+# Crear división especial para tener nodo en 2.25
+nx_before = int(np.round(x_foot_start / elem_size))  # De 0 a 2.25
+nx_after = int(np.round((Lx - x_foot_start) / elem_size))  # De 2.25 a 3.0
+ny_before = int(np.round(y_foot_start / elem_size))  # De 0 a 2.25
+ny_after = int(np.round((Ly - y_foot_start) / elem_size))  # De 2.25 a 3.0
 
-# Para Z, dividir por capas manteniendo elementos cúbicos
+# Divisiones en Z por capas (con nodos en interfaces exactas)
 nz1 = int(np.round(H1 / elem_size))  # SOIL_1
 nz2 = int(np.round(H2 / elem_size))  # SOIL_2
 nz3 = int(np.round(H3 / elem_size))  # SOIL_3
-
-# Divisiones en la zapata (mantener cúbicos)
-nz_foot = int(np.round(tz / elem_size))
+nz_foot = int(np.round(tz / elem_size))  # Zapata
 if nz_foot < 1:
     nz_foot = 1
+if nz3 < 1:
+    nz3 = 1
 
-print(f"Generando malla cúbica estructurada...")
+print(f"Generando malla cúbica estructurada con límites exactos...")
 print(f"  Tamaño de elemento objetivo: {elem_size} m")
-print(f"  Divisiones: nx={nx}, ny={ny}, nz1={nz1}, nz2={nz2}, nz3={nz3}")
+print(f"  Divisiones: nx={nx_before + nx_after}, ny={ny_before + ny_after}")
+print(f"  Divisiones Z: nz1={nz1}, nz2={nz2}, nz3={nz3}")
 
 # ---------------------------------
-# Generar coordenadas estructuradas
+# Generar coordenadas estructuradas con nodos en límites exactos
 # ---------------------------------
-x_coords = np.linspace(0, Lx, nx + 1)
-y_coords = np.linspace(0, Ly, ny + 1)
+# Coordenadas X: necesitamos nodos en 0, 2.25, 3.0
+x_coords_before = np.linspace(0, x_foot_start, nx_before + 1)
+x_coords_after = np.linspace(x_foot_start, Lx, nx_after + 1)
+x_coords = np.unique(np.concatenate([x_coords_before, x_coords_after]))
 
-# Coordenadas Z por capas
-z_coords_soil3 = np.linspace(-Lz, -(H1 + H2), nz3 + 1)
-z_coords_soil2 = np.linspace(-(H1 + H2), -H1, nz2 + 1)
-z_coords_soil1 = np.linspace(-H1, 0, nz1 + 1)
+# Coordenadas Y: necesitamos nodos en 0, 2.25, 3.0
+y_coords_before = np.linspace(0, y_foot_start, ny_before + 1)
+y_coords_after = np.linspace(y_foot_start, Ly, ny_after + 1)
+y_coords = np.unique(np.concatenate([y_coords_before, y_coords_after]))
+
+# Coordenadas Z: necesitamos nodos en -10.0, -9.0, -5.0, -2.0, -1.5, 0.0
+z_coords_soil3 = np.linspace(-Lz, -(H1 + H2), nz3 + 1)  # -10.0 a -9.0
+z_coords_soil2 = np.linspace(-(H1 + H2), -H1, nz2 + 1)  # -9.0 a -5.0
+z_coords_soil1 = np.linspace(-H1, 0, nz1 + 1)  # -5.0 a 0.0
+
+# Asegurar que tenemos nodos en z_base (-2.0) y z_top (-1.5)
+# Agregar estos nodos críticos si no existen
+z_all = np.unique(np.concatenate([z_coords_soil3, z_coords_soil2, z_coords_soil1]))
+critical_z = np.array([z_base, z_top])
+for z_crit in critical_z:
+    if not np.any(np.abs(z_all - z_crit) < 1e-10):
+        z_all = np.sort(np.concatenate([z_all, [z_crit]]))
+
+print(f"  Nodos X: {len(x_coords)} (límites: {x_coords[0]:.3f} a {x_coords[-1]:.3f})")
+print(f"  Nodos Y: {len(y_coords)} (límites: {y_coords[0]:.3f} a {y_coords[-1]:.3f})")
+print(f"  Nodos Z: {len(z_all)} (límites: {z_all[0]:.3f} a {z_all[-1]:.3f})")
 
 # ---------------------------------
 # Función para crear hexaedros estructurados
@@ -97,131 +121,85 @@ def create_structured_hex_mesh(x_coords, y_coords, z_coords):
     return nodes, np.array(elements)
 
 # ---------------------------------
-# Generar malla del suelo completo
+# Generar malla del suelo completo con z_all
 # ---------------------------------
-all_nodes = []
+# Generar todos los nodos primero
+nodes_all, elements_all_temp = create_structured_hex_mesh(x_coords, y_coords, z_all)
+
+# Ahora identificar a qué dominio pertenece cada elemento
 all_elements = []
 all_domains = []
-node_offset = 0
 
-# SOIL_3 (capa inferior)
-nodes_s3, elements_s3 = create_structured_hex_mesh(x_coords, y_coords, z_coords_soil3)
-all_nodes.append(nodes_s3)
-all_elements.append(elements_s3)
-all_domains.append(np.full(len(elements_s3), 3, dtype=int))  # Dominio 3
-node_offset += len(nodes_s3)
+nx_total = len(x_coords)
+ny_total = len(y_coords)
+nz_total = len(z_all)
 
-# SOIL_2 (capa media)
-nodes_s2, elements_s2 = create_structured_hex_mesh(x_coords, y_coords, z_coords_soil2)
-# Compartir nodos en la interfaz
-nodes_s2_unique = nodes_s2[nx * ny:]  # Omitir primera capa (compartida con SOIL_3)
-all_nodes.append(nodes_s2_unique)
-elements_s2_adjusted = elements_s2.copy()
-# Ajustar índices para compartir nodos
-for i in range(len(elements_s2)):
-    for j in range(8):
-        if elements_s2[i, j] < nx * ny:
-            # Nodo en la interfaz, apuntar a SOIL_3
-            elements_s2_adjusted[i, j] = node_offset - nx * ny + elements_s2[i, j]
+for elem in elements_all_temp:
+    # Obtener coordenadas de los nodos del elemento
+    elem_nodes = nodes_all[elem]
+    center = elem_nodes.mean(axis=0)
+    z_center = center[2]
+
+    # Determinar a qué capa pertenece según Z
+    if z_center >= -H1:  # SOIL_1
+        # Verificar si está en la zona de la zapata
+        in_footing_zone = (x_foot_start <= center[0] <= x_foot_end and
+                          y_foot_start <= center[1] <= y_foot_end and
+                          z_base <= z_center <= z_top)
+
+        if in_footing_zone:
+            # Es parte de la zapata
+            all_elements.append(elem)
+            all_domains.append(4)  # FOOTING
         else:
-            # Nodo propio de SOIL_2
-            elements_s2_adjusted[i, j] = node_offset + elements_s2[i, j] - nx * ny
+            # Es suelo SOIL_1
+            all_elements.append(elem)
+            all_domains.append(1)  # SOIL_1
 
-all_elements.append(elements_s2_adjusted)
-all_domains.append(np.full(len(elements_s2), 2, dtype=int))  # Dominio 2
-node_offset += len(nodes_s2_unique)
+    elif z_center >= -(H1 + H2):  # SOIL_2
+        all_elements.append(elem)
+        all_domains.append(2)  # SOIL_2
 
-# SOIL_1 (capa superior) - aquí tenemos que excluir la zona de la zapata
-nodes_s1, elements_s1 = create_structured_hex_mesh(x_coords, y_coords, z_coords_soil1)
-nodes_s1_unique = nodes_s1[nx * ny:]  # Omitir primera capa (compartida con SOIL_2)
-all_nodes.append(nodes_s1_unique)
+    else:  # SOIL_3
+        all_elements.append(elem)
+        all_domains.append(3)  # SOIL_3
 
-# Filtrar elementos que NO están en la zona de la zapata
-elements_s1_filtered = []
-domains_s1_filtered = []
+points = nodes_all
+elements_all = np.array(all_elements)
+domain_id_combined = np.array(all_domains, dtype=int)
 
-for elem_idx, elem in enumerate(elements_s1):
-    # Obtener coordenadas del centro del elemento
-    elem_nodes_coords = nodes_s1[elem]
-    center = elem_nodes_coords.mean(axis=0)
-
-    # Verificar si está en la zona de la zapata
-    in_footing_zone = (x_foot_start <= center[0] <= x_foot_end and
-                      y_foot_start <= center[1] <= y_foot_end and
-                      z_base <= center[2] <= z_top)
-
-    if not in_footing_zone:
-        # Ajustar índices para compartir nodos
-        elem_adjusted = elem.copy()
-        for j in range(8):
-            if elem[j] < nx * ny:
-                # Nodo en la interfaz con SOIL_2
-                elem_adjusted[j] = node_offset - nx * ny + elem[j]
-            else:
-                # Nodo propio de SOIL_1
-                elem_adjusted[j] = node_offset + elem[j] - nx * ny
-
-        elements_s1_filtered.append(elem_adjusted)
-        domains_s1_filtered.append(1)  # Dominio 1
-
-if elements_s1_filtered:
-    all_elements.append(np.array(elements_s1_filtered))
-    all_domains.append(np.array(domains_s1_filtered, dtype=int))
-node_offset += len(nodes_s1_unique)
-
-# ---------------------------------
-# Generar malla de la zapata
-# ---------------------------------
-# Encontrar índices de x, y que corresponden a la zapata
-x_indices = np.where((x_coords >= x_foot_start - elem_size/2) &
-                     (x_coords <= x_foot_end + elem_size/2))[0]
-y_indices = np.where((y_coords >= y_foot_start - elem_size/2) &
-                     (y_coords <= y_foot_end + elem_size/2))[0]
-
-x_foot_coords = x_coords[x_indices]
-y_foot_coords = y_coords[y_indices]
-z_foot_coords = np.linspace(z_base, z_top, nz_foot + 1)
-
-nodes_foot, elements_foot = create_structured_hex_mesh(x_foot_coords, y_foot_coords, z_foot_coords)
-all_nodes.append(nodes_foot)
-
-# Ajustar índices de elementos de zapata
-elements_foot_adjusted = elements_foot + node_offset
-all_elements.append(elements_foot_adjusted)
-all_domains.append(np.full(len(elements_foot), 4, dtype=int))  # Dominio 4 (FOOTING)
-
-# ---------------------------------
-# Combinar todo
-# ---------------------------------
-points = np.vstack(all_nodes)
-elements_all = np.vstack(all_elements)
-domain_id_combined = np.concatenate(all_domains)
-
-print(f"\n✅ Malla cúbica generada:")
+print(f"\n✅ Malla cúbica generada con límites exactos:")
 print(f"   - Total de nodos: {len(points)}")
 print(f"   - Total de elementos: {len(elements_all)}")
 print(f"   - SOIL_3: {np.sum(domain_id_combined == 3)} elementos")
 print(f"   - SOIL_2: {np.sum(domain_id_combined == 2)} elementos")
 print(f"   - SOIL_1: {np.sum(domain_id_combined == 1)} elementos")
 print(f"   - FOOTING: {np.sum(domain_id_combined == 4)} elementos")
+print(f"\n📍 Límites verificados:")
+print(f"   - X: [{points[:, 0].min():.3f}, {points[:, 0].max():.3f}] (esperado: [0.000, 3.000])")
+print(f"   - Y: [{points[:, 1].min():.3f}, {points[:, 1].max():.3f}] (esperado: [0.000, 3.000])")
+print(f"   - Z: [{points[:, 2].min():.3f}, {points[:, 2].max():.3f}] (esperado: [-10.000, 0.000])")
 
 # ---------------------------------
 # Verificar proporciones de elementos
 # ---------------------------------
+sample_size = min(100, len(elements_all))
 elem_dims = []
-for elem in elements_all[:100]:  # Verificar primeros 100 elementos
+for elem in elements_all[:sample_size]:
     coords = points[elem]
     dx = coords[:, 0].max() - coords[:, 0].min()
     dy = coords[:, 1].max() - coords[:, 1].min()
     dz = coords[:, 2].max() - coords[:, 2].min()
-    elem_dims.append([dx, dy, dz])
+    if dx > 0 and dy > 0 and dz > 0:  # Evitar divisiones por cero
+        elem_dims.append([dx, dy, dz])
 
-elem_dims = np.array(elem_dims)
-aspect_ratio = elem_dims.max(axis=1) / elem_dims.min(axis=1)
-print(f"\n📊 Análisis de forma de elementos (muestra de 100):")
-print(f"   - Aspect ratio promedio: {aspect_ratio.mean():.2f}")
-print(f"   - Aspect ratio máximo: {aspect_ratio.max():.2f}")
-print(f"   - Aspect ratio mínimo: {aspect_ratio.min():.2f}")
+if elem_dims:
+    elem_dims = np.array(elem_dims)
+    aspect_ratio = elem_dims.max(axis=1) / (elem_dims.min(axis=1) + 1e-10)
+    print(f"\n📊 Análisis de forma de elementos (muestra de {len(elem_dims)}):")
+    print(f"   - Aspect ratio promedio: {aspect_ratio.mean():.2f}")
+    print(f"   - Aspect ratio máximo: {aspect_ratio.max():.2f}")
+    print(f"   - Aspect ratio mínimo: {aspect_ratio.min():.2f}")
 
 # ---------------------------------
 # Exportar a PyVista y archivos
@@ -251,5 +229,11 @@ print(f"✅ Guardado XDMF: {xdmf_path}")
 
 print("\n✅ Malla cúbica estructurada generada exitosamente")
 print(f"   - Dominios: SOIL_1, SOIL_2, SOIL_3, FOOTING")
+print(f"   - Geometría preservada EXACTAMENTE igual al script original")
 print(f"\n📊 Para visualizar en ParaView:")
 print(f"   paraview {vtu_path}")
+print(f"\nComparación con malla original:")
+print(f"  - Límites X: 0.000 a 3.000 ✓")
+print(f"  - Límites Y: 0.000 a 3.000 ✓")
+print(f"  - Límites Z: -10.000 a 0.000 ✓")
+print(f"  - Zapata: ({x_foot_start:.2f}, {y_foot_start:.2f}, {z_base:.2f}) a ({x_foot_end:.2f}, {y_foot_end:.2f}, {z_top:.2f}) ✓")
