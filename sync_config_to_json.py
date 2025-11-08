@@ -47,7 +47,7 @@ def generar_mesh_config_desde_config_py():
         },
         "mesh_refinement": {
             "lc_footing": config.MALLA['graded']['dx_min'],
-            "lc_near": config.MALLA['graded']['dx_min'] * 1.5,
+            "lc_near": config.MALLA['graded']['dx_min'] * 1.2,
             "lc_far": config.MALLA['graded']['dx_max'],
             "growth_rate": config.MALLA['graded']['ratio'],
             "optimize_netgen": True

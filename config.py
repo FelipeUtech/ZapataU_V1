@@ -30,14 +30,14 @@ ZAPATA = {
 # Cálculo automático del dominio basado en dimensiones de zapata
 _lado_mayor_zapata = max(ZAPATA['B'], ZAPATA['L'])
 _lado_menor_zapata = min(ZAPATA['B'], ZAPATA['L'])
-_factor_dominio = 5  # Factor multiplicador: dominio = 5 × lado mayor
+_factor_dominio = 3  # Factor multiplicador: dominio = 3 × lado mayor
 
 DOMINIO = {
     'factor_horizontal': _factor_dominio,  # Factor multiplicador del lado mayor
-                                           # Se calcula como 5 × max(B, L)
+                                           # Se calcula como 3 × max(B, L)
 
     'ancho_horizontal': _factor_dominio * _lado_mayor_zapata,  # Calculado automáticamente
-                                                                # = 5 × max(B, L)
+                                                                # = 3 × max(B, L)
 
     'profundidad': None,        # Se calcula automáticamente como suma de estratos
                                 # Ver función calcular_profundidad_dominio()
@@ -73,9 +73,9 @@ MALLA = {
     },
 
     # Parámetros para malla gradual (transición geométrica)
-    # Cálculo automático: dx_min = min(B, L) / 5
+    # Cálculo automático: dx_min = min(B, L) / 6
     'graded': {
-        'dx_min': _lado_menor_zapata / 5,  # Tamaño mínimo = min(B,L)/5 - CALCULADO AUTOMÁTICAMENTE
+        'dx_min': _lado_menor_zapata / 6,  # Tamaño mínimo = min(B,L)/6 - CALCULADO AUTOMÁTICAMENTE
         'dx_max': 2.0,          # Tamaño máximo de elemento (bordes) - OPTIMIZADO
         'ratio': 1.20,          # Ratio de crecimiento geométrico (1.1-1.2) - OPTIMIZADO
         'dz_surface': 0.6,      # Tamaño elemento vertical superficial - OPTIMIZADO
@@ -230,11 +230,11 @@ def calcular_profundidad_dominio():
 def calcular_tamano_elemento_minimo():
     """
     Calcula el tamaño de elemento mínimo en contacto con la zapata.
-    Fórmula: lc_footing = min(B, L) / 5
+    Fórmula: lc_footing = min(B, L) / 6
     Retorna el tamaño en metros.
     """
     lado_menor = min(ZAPATA['B'], ZAPATA['L'])
-    return lado_menor / 5
+    return lado_menor / 6
 
 
 def obtener_dimensiones_dominio():
@@ -331,7 +331,7 @@ def imprimir_resumen():
     print(f"  Modelo: {'1/4 con simetría' if DOMINIO['usar_cuarto_modelo'] else 'Completo'}")
     if MALLA['tipo'] == 'graded':
         lc_min = calcular_tamano_elemento_minimo()
-        print(f"  Tamaño elemento mínimo: {lc_min:.3f}m = min(B,L)/5 = {dimensiones['lado_menor_zapata']}/5")
+        print(f"  Tamaño elemento mínimo: {lc_min:.3f}m = min(B,L)/6 = {dimensiones['lado_menor_zapata']}/6")
         print(f"  Tamaño elemento máximo: {MALLA['graded']['dx_max']}m")
         print(f"  Ratio de crecimiento: {MALLA['graded']['ratio']}")
 
