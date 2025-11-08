@@ -1,44 +1,167 @@
+# ============================================================================
 # ZapataU_V1 - Análisis de Fundaciones con OpenSees
-# Archivo de dependencias de Python
+# Sistema Integrado de Análisis Geotécnico-Estructural 3D
+# ============================================================================
 #
-# IMPORTANTE: Usar Python 3.9, 3.10 o 3.11 (NO 3.12+)
+# VERSIÓN: 1.0
+# PYTHON REQUERIDO: 3.9, 3.10 o 3.11 (RECOMENDADO: 3.10)
+# IMPORTANTE: NO usar Python 3.12+ (incompatible con OpenSeesPy)
 #
-# Instalación:
+# ============================================================================
+# INSTALACIÓN - WINDOWS
+# ============================================================================
+#
+# PREREQUISITOS WINDOWS:
+#   1. Python 3.10 desde python.org (marcar "Add to PATH")
+#   2. Visual C++ Redistributable 2015-2022:
+#      https://aka.ms/vs/17/release/vc_redist.x64.exe
+#   3. Git for Windows (opcional)
+#
+# INSTALACIÓN RECOMENDADA PASO A PASO:
+#
+#   pip install --upgrade pip setuptools wheel
+#   pip install numpy==1.24.3
+#   pip install scipy==1.10.1
+#   pip install gmsh==4.11.1
+#   pip install vtk==9.2.6
+#   pip install pyvista==0.43.0
+#   pip install meshio==5.3.4
+#   pip install matplotlib==3.7.1
+#   pip install openseespy==3.5.1.11
+#
+# O INSTALACIÓN COMPLETA:
 #   pip install -r requirements.txt
 #
-# Si tienes problemas en Linux, primero ejecuta:
-#   sudo apt install build-essential gfortran liblapack-dev libblas-dev libopenblas-dev tcl-dev tk-dev
+# ============================================================================
+# INSTALACIÓN - LINUX
+# ============================================================================
+#
+# PREREQUISITOS LINUX (Ubuntu/Debian):
+#   sudo apt update
+#   sudo apt install python3 python3-pip python3-dev
+#   sudo apt install build-essential gfortran
+#   sudo apt install liblapack-dev libblas-dev libopenblas-dev
+#   sudo apt install tcl-dev tk-dev
+#
+# INSTALACIÓN:
+#   pip3 install -r requirements.txt
+#
+# ============================================================================
+# DEPENDENCIAS
+# ============================================================================
 
-# Computación numérica básica (DEBE instalarse primero)
+# ----------------------------------------------------------------------------
+# CORE: Computación Numérica
+# ----------------------------------------------------------------------------
+
+# NumPy - Arrays y álgebra lineal
+# CRÍTICO: Instalar PRIMERO antes que otras librerías
 numpy==1.24.3
 
-# OpenSees - Análisis de elementos finitos
-# NOTA: Versión crítica, puede requerir dependencias del sistema
-openseespy==3.5.1.11
-
-# GMSH - Generación de mallas
-gmsh==4.11.1
-
-# PyVista - Visualización 3D y exportación VTU
-pyvista==0.43.0
-
-# meshio - Conversión entre formatos de malla
-meshio==5.3.4
-
-# Matplotlib - Gráficos 2D
-matplotlib==3.7.1
-
-# SciPy - Computación científica
+# SciPy - Algoritmos científicos
 scipy==1.10.1
 
-# Pandas - Análisis de datos (opcional)
+# Pandas - Análisis de datos (opcional pero útil)
 pandas==2.0.3
 
-# Dependencias adicionales para visualización
-# (instaladas automáticamente por pyvista, pero listadas explícitamente)
+# ----------------------------------------------------------------------------
+# OPENSEES: Motor de Análisis Estructural
+# ----------------------------------------------------------------------------
+
+# OpenSeesPy - Wrapper Python para OpenSees
+# NOTA WINDOWS: Puede requerir Visual C++ Build Tools
+# Si falla, intentar versión 3.4.0.1 o usar Conda
+# conda install -c conda-forge openseespy
+openseespy==3.5.1.11
+
+# ----------------------------------------------------------------------------
+# GMSH: Generación de Mallas FEM
+# ----------------------------------------------------------------------------
+
+# Gmsh - Generador de mallas tetraédricas/hexaédricas
+# SDK oficial de Python, funciona bien en todas las plataformas
+gmsh==4.11.1
+
+# ----------------------------------------------------------------------------
+# VISUALIZACIÓN: PyVista + VTK
+# ----------------------------------------------------------------------------
+
+# VTK - Visualization Toolkit
+# IMPORTANTE: Instalar ANTES que PyVista para evitar conflictos
 vtk==9.2.6
+
+# PyVista - Visualización 3D interactiva y exportación VTU
+# Compatible con ParaView, Jupyter notebooks
+pyvista==0.43.0
+
+# Pillow - Procesamiento de imágenes (requerido por PyVista)
 pillow==10.0.0
+
+# imageio - Lectura/escritura de imágenes
 imageio==2.31.1
 
-# Utilidades
-pathlib2==2.3.7; python_version < '3.4'
+# ----------------------------------------------------------------------------
+# MALLAS: Conversión y Procesamiento
+# ----------------------------------------------------------------------------
+
+# MeshIO - Conversión entre formatos de malla
+# Soporta: VTU, XDMF, MSH, STL, OBJ, etc.
+meshio==5.3.4
+
+# h5py - Soporte para archivos HDF5 (usado por XDMF)
+# Instalado automáticamente por meshio
+h5py>=3.7.0,<4.0.0
+
+# ----------------------------------------------------------------------------
+# PLOTTING: Gráficos 2D
+# ----------------------------------------------------------------------------
+
+# Matplotlib - Gráficos 2D y reportes
+matplotlib==3.7.1
+
+# ----------------------------------------------------------------------------
+# UTILIDADES
+# ----------------------------------------------------------------------------
+
+# tqdm - Barras de progreso (opcional)
+tqdm>=4.65.0
+
+# colorama - Colores en terminal Windows
+colorama>=0.4.6; sys_platform == 'win32'
+
+# ============================================================================
+# SOLUCIÓN DE PROBLEMAS COMUNES
+# ============================================================================
+#
+# ERROR: "Microsoft Visual C++ 14.0 is required"
+# SOLUCIÓN:
+#   Instalar Visual C++ Build Tools desde:
+#   https://visualstudio.microsoft.com/visual-cpp-build-tools/
+#   O instalar Visual C++ Redistributable desde:
+#   https://aka.ms/vs/17/release/vc_redist.x64.exe
+#
+# ERROR: OpenSeesPy no se instala en Windows
+# SOLUCIÓN:
+#   Opción 1: Usar Python 3.10 (más compatible)
+#   Opción 2: Usar versión anterior: pip install openseespy==3.4.0.1
+#   Opción 3: Usar Conda: conda install -c conda-forge openseespy
+#   Opción 4: Usar WSL (Windows Subsystem for Linux)
+#
+# ERROR: VTK/PyVista dan problemas de OpenGL
+# SOLUCIÓN:
+#   Actualizar drivers de tarjeta gráfica
+#   Usar modo offscreen: export PYVISTA_OFF_SCREEN=true
+#   En scripts: pv.start_xvfb() antes de plotear
+#
+# ERROR: "DLL load failed" en Windows
+# SOLUCIÓN:
+#   Instalar Visual C++ Redistributable (ver link arriba)
+#   Reiniciar la terminal después de instalar
+#
+# ERROR: Problemas de memoria en mallas grandes
+# SOLUCIÓN:
+#   Reducir refinamiento en mesh_config.json
+#   Usar --export-only en visualización
+#   Cerrar otras aplicaciones
+#
+# ============================================================================
