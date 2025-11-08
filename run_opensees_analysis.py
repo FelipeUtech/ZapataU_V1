@@ -137,11 +137,12 @@ def crear_elementos(elementos_list):
 
     for elem in elementos_list:
         # element FourNodeTetrahedron eleTag iNode jNode kNode lNode matTag <b1 b2 b3>
+        # Sin fuerzas de cuerpo (body forces) - usaremos fuerzas nodales equivalentes
         ops.element('FourNodeTetrahedron',
                    elem['tag'],
                    *elem['nodos'],
                    elem['material'],
-                   0.0, 0.0, 0.0)  # Sin gravedad por ahora para probar modelo
+                   0.0, 0.0, 0.0)
 
     # Estadísticas por material
     materiales_count = {}
@@ -199,6 +200,71 @@ def aplicar_condiciones_frontera(nodos_dict):
     print(f"      Base fija (z={z_min:.1f}m): {count_base} nodos")
     print(f"      Simetría X (x={x_min:.1f}m): {count_sym_x} nodos")
     print(f"      Simetría Y (y={y_min:.1f}m): {count_sym_y} nodos")
+
+
+def calcular_fuerzas_gravedad(nodos_dict, elementos_list):
+    """
+    Calcula fuerzas nodales equivalentes por peso propio de suelo y zapata.
+
+    Para cada elemento tetraédrico, calcula su volumen y masa, y distribuye
+    la fuerza gravitacional entre sus 4 nodos (1/4 del peso a cada nodo).
+    """
+    print("\n⚖️  Calculando fuerzas nodales por peso propio...")
+
+    # Gravedad (hacia abajo en Z)
+    g = 9.81  # m/s²
+
+    # Diccionario para acumular fuerzas por nodo
+    fuerzas_nodos = {}  # {node_tag: fuerza_z}
+
+    # Obtener densidades por material desde config
+    densidades = {
+        1: config.ESTRATOS_SUELO[0]['rho'] / 1000.0,  # ton/m³
+        2: config.ESTRATOS_SUELO[1]['rho'] / 1000.0,
+        3: config.ESTRATOS_SUELO[2]['rho'] / 1000.0,
+        4: config.MATERIAL_ZAPATA['rho'] / 1000.0
+    }
+
+    masa_total = 0.0
+
+    for elem in elementos_list:
+        # Obtener coordenadas de los 4 nodos del tetraedro
+        nodos_elem = elem['nodos']
+        coords = np.array([nodos_dict[n] for n in nodos_elem])
+
+        # Calcular volumen del tetraedro
+        # V = |det(v1, v2, v3)| / 6, donde v1,v2,v3 son vectores desde nodo 0
+        v1 = coords[1] - coords[0]
+        v2 = coords[2] - coords[0]
+        v3 = coords[3] - coords[0]
+        volumen = abs(np.dot(v1, np.cross(v2, v3))) / 6.0
+
+        # Obtener densidad del material
+        mat_id = elem['material']
+        rho = densidades.get(mat_id, 1.8)  # ton/m³
+
+        # Masa del elemento
+        masa_elem = volumen * rho  # ton
+        masa_total += masa_elem
+
+        # Peso del elemento (fuerza hacia abajo)
+        peso_elem = masa_elem * g  # kN (porque ton * m/s² = kN)
+
+        # Distribuir 1/4 del peso a cada nodo del tetraedro
+        fuerza_por_nodo = -peso_elem / 4.0  # Negativo = hacia abajo
+
+        for nodo in nodos_elem:
+            if nodo not in fuerzas_nodos:
+                fuerzas_nodos[nodo] = 0.0
+            fuerzas_nodos[nodo] += fuerza_por_nodo
+
+    peso_total = masa_total * g
+
+    print(f"   Masa total del sistema: {masa_total:.2f} ton")
+    print(f"   Peso total: {peso_total:.2f} kN")
+    print(f"   Nodos con fuerza de gravedad: {len(fuerzas_nodos)}")
+
+    return fuerzas_nodos
 
 
 def aplicar_cargas(nodos_dict):
@@ -268,16 +334,17 @@ def aplicar_cargas(nodos_dict):
     print(f"   Nodos con carga aplicada: {n_nodos_carga}")
     print(f"   Carga por nodo: {carga_por_nodo:.3f} kN")
 
-    # Crear patrón de carga para cargas de columna (usar ID 1)
-    ops.timeSeries('Linear', 1)
-    ops.pattern('Plain', 1, 1)
+    # Crear patrón de carga para cargas de columna (usar ID 2)
+    # Pattern ID 1 está reservado para gravedad
+    ops.timeSeries('Linear', 2)
+    ops.pattern('Plain', 2, 2)
 
     # Aplicar cargas
     for node_tag in nodos_carga:
         # load nodeTag Fx Fy Fz
         ops.load(node_tag, 0.0, 0.0, carga_por_nodo)
 
-    print(f"✅ Cargas aplicadas en {n_nodos_carga} nodos")
+    print(f"✅ Cargas de columna aplicadas en {n_nodos_carga} nodos (Pattern ID 2)")
 
 
 def configurar_analisis():
@@ -304,17 +371,30 @@ def configurar_analisis():
     print("✅ Análisis configurado (20 pasos de carga)")
 
 
-def ejecutar_fase_gravedad():
-    """Ejecuta fase de inicialización (sin peso propio)."""
-    print("\n🔧 FASE 1: INICIALIZACIÓN DEL MODELO")
+def ejecutar_fase_gravedad(fuerzas_gravedad):
+    """
+    Ejecuta fase de peso propio (gravedad).
+
+    Args:
+        fuerzas_gravedad: dict con {node_tag: fuerza_z} calculado previamente
+    """
+    print("\n🌍 FASE 1: PESO PROPIO (GRAVEDAD)")
     print("="*80)
 
-    # Crear patrón de carga base (sin cargas, solo para estructura del análisis)
+    # Crear patrón de carga para gravedad (Pattern ID = 1)
     ops.timeSeries('Linear', 1)
     ops.pattern('Plain', 1, 1)
-    # No aplicamos cargas nodales en esta fase
 
-    # Configurar análisis de inicialización
+    # Aplicar fuerzas nodales de gravedad
+    count_cargas = 0
+    for node_tag, fuerza_z in fuerzas_gravedad.items():
+        # load nodeTag Fx Fy Fz
+        ops.load(node_tag, 0.0, 0.0, fuerza_z)
+        count_cargas += 1
+
+    print(f"   ✅ {count_cargas} fuerzas nodales de gravedad aplicadas")
+
+    # Configurar análisis de gravedad
     ops.wipeAnalysis()
     ops.constraints('Plain')
     ops.numberer('RCM')
@@ -324,8 +404,8 @@ def ejecutar_fase_gravedad():
     ops.integrator('LoadControl', 0.1)  # 10 pasos
     ops.analysis('Static')
 
-    print("⚙️  Análisis de inicialización configurado")
-    print("   Ejecutando análisis base en 10 pasos...")
+    print("⚙️  Análisis de gravedad configurado")
+    print("   Ejecutando análisis de peso propio en 10 pasos...")
 
     n_steps_gravity = 10
     ok = 0
@@ -349,30 +429,31 @@ def ejecutar_fase_gravedad():
 
             if ok == 0:
                 ops.algorithm('Newton')
-                print(f"   ✅ Paso {i+1}/{n_steps_gravity} convergió")
+                print(f"   ✅ Paso {i+1}/{n_steps_gravity} convergió con algoritmo alternativo")
             else:
-                print(f"   ❌ Paso {i+1}/{n_steps_gravity} falló")
+                print(f"   ❌ Paso {i+1}/{n_steps_gravity} falló incluso con algoritmos alternativos")
                 return False
         else:
             if (i+1) % 2 == 0:
                 print(f"   ✓ Paso {i+1}/{n_steps_gravity} completado")
 
     if ok == 0:
-        print(f"✅ Fase de inicialización completada exitosamente")
-        print(f"   Modelo listo para aplicar cargas\n")
+        print(f"✅ Fase de gravedad completada exitosamente")
+        print(f"   Estado de peso propio establecido")
 
-        # NO usamos loadConst() para evitar conflictos con el segundo patrón de carga
-        # ops.loadConst('-time', 0.0)
+        # Fijar el estado actual de gravedad como constante
+        print(f"   🔒 Fijando estado de gravedad con loadConst()")
+        ops.loadConst('-time', 0.0)
 
         return True
     else:
-        print(f"❌ Fase de inicialización falló")
+        print(f"❌ Fase de gravedad falló")
         return False
 
 
 def ejecutar_fase_carga():
-    """Ejecuta análisis de carga de la zapata."""
-    print("\n📦 ANÁLISIS DE CARGA DE ZAPATA")
+    """Ejecuta análisis de carga de la zapata (Fase 2)."""
+    print("\n📦 FASE 2: CARGA DE COLUMNA")
     print("="*80)
 
     # Configurar análisis para carga de zapata
@@ -559,24 +640,34 @@ def main():
         print("="*80)
         aplicar_condiciones_frontera(nodos)
 
-        # 4. Aplicar cargas y ejecutar análisis
+        # 4. Calcular fuerzas de gravedad
         print("\n" + "="*80)
-        print("PASO 4: APLICACIÓN DE CARGAS")
+        print("PASO 4: CÁLCULO DE FUERZAS DE GRAVEDAD")
         print("="*80)
-        print("⚠️  NOTA: Sin peso propio (gravedad)")
-        print("   Las fuerzas de cuerpo (gravedad) en FourNodeTetrahedron")
-        print("   causan problemas numéricos en OpenSeesPy.")
-        print("   Este análisis solo considera la carga de la columna.\n")
-        aplicar_cargas(nodos)
+        fuerzas_gravedad = calcular_fuerzas_gravedad(nodos, elementos)
 
-        # 5. Ejecutar análisis
+        # 5. Ejecutar análisis en dos fases
         print("\n" + "="*80)
-        print("PASO 5: EJECUCIÓN DEL ANÁLISIS")
+        print("PASO 5: EJECUCIÓN DEL ANÁLISIS EN DOS FASES")
         print("="*80)
+        print("📋 Análisis estructurado:")
+        print("   1. Fase de gravedad (peso propio)")
+        print("   2. Fase de carga (carga de columna)")
+        print()
+
+        # Fase 1: Gravedad
+        exito_gravedad = ejecutar_fase_gravedad(fuerzas_gravedad)
+
+        if not exito_gravedad:
+            print("\n❌ Fase de gravedad falló")
+            sys.exit(1)
+
+        # Fase 2: Aplicar y analizar carga de columna
+        aplicar_cargas(nodos)
         exito_carga = ejecutar_fase_carga()
 
         if not exito_carga:
-            print("\n❌ El análisis falló")
+            print("\n❌ Fase de carga falló")
             sys.exit(1)
 
         # 6. Extraer resultados

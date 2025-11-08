@@ -3,10 +3,10 @@ ESTADÍSTICAS DE RESULTADOS
 ======================================================================
 
 Desplazamientos verticales (uz):
-   Máximo (asentamiento): 0.025639 m = 25.639 mm
+   Máximo (asentamiento): 0.149957 m = 149.957 mm
    Mínimo: 0.000000e+00 m
-   Promedio: -7.035600e-03 m
-   Desv. estándar: 3.364022e-03 m
+   Promedio: -1.050370e-01 m
+   Desv. estándar: 3.703079e-02 m
 
 Archivos generados:
    - desplazamientos.csv
