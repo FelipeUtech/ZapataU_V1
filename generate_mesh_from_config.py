@@ -173,20 +173,85 @@ def generate_mesh_from_config(config):
         foot_width = B / 2
         foot_length = L / 2
 
-    excav = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, excav_width, excav_length, tz + Df)
+    # No crear excavación - solo crear zapata directamente
     foot = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, foot_width, foot_length, tz)
     gmsh.model.occ.synchronize()
 
-    # Cortar excavación de cada capa de suelo
-    print("Cortando excavación en capas de suelo...")
+    # Fragmentar todos los volúmenes para que compartan nodos en las interfaces
+    print("Fragmentando volúmenes para crear interfaces compartidas...")
+    print("  (Esto garantiza que zapata y suelo compartan nodos)")
+
+    # Recolectar todos los volúmenes
+    all_volumes = [(3, soil_vol['tag']) for soil_vol in soil_volumes] + [(3, foot)]
+
+    # Fragment fusiona todos los volúmenes, creando nodos compartidos en las interfaces
+    fragmented, _ = gmsh.model.occ.fragment(all_volumes, [])
+
+    gmsh.model.occ.synchronize()
+
+    # Identificar qué fragmentos corresponden a cada material
+    # basándonos en el centro de masa de cada volumen
+    print("Identificando materiales de volúmenes fragmentados...")
+
+    # Primero, actualizar soil_volumes con los fragmentos del suelo
+    new_soil_volumes = []
     for i, soil_vol in enumerate(soil_volumes):
-        soil_cut, _ = gmsh.model.occ.cut(
-            [(3, soil_vol['tag'])],
-            [(3, excav)],
-            removeObject=True,
-            removeTool=(i == len(soil_volumes) - 1)  # Remover herramienta en última capa
-        )
-        soil_volumes[i]['tag_cut'] = soil_cut[0][1]
+        # Buscar fragmentos que estén en la región de este estrato
+        z_top_layer = soil_vol['z_top']
+        z_bottom_layer = soil_vol['z_bottom']
+        z_mid = (z_top_layer + z_bottom_layer) / 2
+
+        # Buscar todos los volúmenes que tienen su centro de masa en esta capa
+        for dim, tag in fragmented:
+            if dim != 3:  # Solo volúmenes (dimensión 3)
+                continue
+
+            # Obtener centro de masa del volumen
+            com = gmsh.model.occ.getCenterOfMass(dim, tag)
+
+            # Verificar si está en el rango Z de este estrato y fuera de la zapata
+            if z_bottom_layer <= com[2] <= z_top_layer:
+                # Verificar que no es la zapata (la zapata está en x0/2, y0/2)
+                in_footing_x = (x0/2 <= com[0] <= x0/2 + foot_width)
+                in_footing_y = (y0/2 <= com[1] <= y0/2 + foot_length)
+                in_footing_z = (z_base <= com[2] <= z_base + tz)
+
+                if not (in_footing_x and in_footing_y and in_footing_z):
+                    # Este fragmento es parte del suelo
+                    new_soil_volumes.append({
+                        'tag_cut': tag,
+                        'name': soil_vol['name'],
+                        'material_id': soil_vol['material_id'],
+                        'z_top': z_top_layer,
+                        'z_bottom': z_bottom_layer
+                    })
+
+    # Reemplazar soil_volumes con los fragmentos identificados
+    soil_volumes = new_soil_volumes
+
+    # Encontrar el fragmento de la zapata
+    foot_tag = None
+    for dim, tag in fragmented:
+        if dim != 3:
+            continue
+
+        com = gmsh.model.occ.getCenterOfMass(dim, tag)
+
+        # Verificar si está en la posición de la zapata
+        in_footing_x = (x0/2 <= com[0] <= x0/2 + foot_width)
+        in_footing_y = (y0/2 <= com[1] <= y0/2 + foot_length)
+        in_footing_z = (z_base <= com[2] <= z_base + tz)
+
+        if in_footing_x and in_footing_y and in_footing_z:
+            foot_tag = tag
+            break
+
+    if foot_tag is None:
+        raise RuntimeError("No se pudo identificar el volumen de la zapata después de fragment()")
+
+    foot = foot_tag
+
+    print(f"  ✅ Identificados: {len(soil_volumes)} fragmentos de suelo + 1 zapata")
 
     gmsh.model.occ.synchronize()
 
@@ -194,13 +259,28 @@ def generate_mesh_from_config(config):
     print("Definiendo grupos físicos...")
     physical_groups = {}
 
+    # Agrupar fragmentos de suelo por material
+    # (puede haber múltiples fragmentos por estrato si la zapata lo divide)
+    material_fragments = {}
     for soil_vol in soil_volumes:
-        phys_group = gmsh.model.addPhysicalGroup(3, [soil_vol['tag_cut']])
-        gmsh.model.setPhysicalName(3, phys_group, soil_vol['name'])
-        physical_groups[soil_vol['name']] = {
+        mat_id = soil_vol['material_id']
+        mat_name = soil_vol['name']
+        if mat_name not in material_fragments:
+            material_fragments[mat_name] = {
+                'tags': [],
+                'material_id': mat_id
+            }
+        material_fragments[mat_name]['tags'].append(soil_vol['tag_cut'])
+
+    # Crear un Physical Group por cada material único
+    for mat_name, info in material_fragments.items():
+        phys_group = gmsh.model.addPhysicalGroup(3, info['tags'])
+        gmsh.model.setPhysicalName(3, phys_group, mat_name)
+        physical_groups[mat_name] = {
             'tag': phys_group,
-            'material_id': soil_vol['material_id']
+            'material_id': info['material_id']
         }
+        print(f"  Material '{mat_name}': {len(info['tags'])} fragmentos agrupados")
 
     # Grupo físico para zapata
     phys_foot = gmsh.model.addPhysicalGroup(3, [foot])
