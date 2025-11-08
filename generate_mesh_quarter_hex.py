@@ -1,3 +1,4 @@
+import gmsh
 import numpy as np
 import pyvista as pv
 import meshio
@@ -17,179 +18,167 @@ Lx /= 2
 Ly /= 2
 
 # ---------------------------------
-# Parámetros de discretización
+# Inicializar Gmsh
 # ---------------------------------
-nx, ny = 12, 12  # Divisiones en X e Y
-nz1, nz2, nz3 = 10, 8, 2  # Divisiones en cada capa de suelo
-nz_foot = 2  # Divisiones en zapata
+gmsh.initialize()
+gmsh.model.add("zapata_3D_cuarto_hex")
 
-# Coordenadas del área de la zapata (1/4)
-x_foot_start = x0 / 2
-x_foot_end = x_foot_start + B / 4
-y_foot_start = y0 / 2
-y_foot_end = y_foot_start + B / 4
+# Opciones para generar hexaedros
+gmsh.option.setNumber("Mesh.RecombineAll", 1)
+gmsh.option.setNumber("Mesh.Recombine3DAll", 1)
+gmsh.option.setNumber("Mesh.Algorithm", 8)  # Delaunay for quads
+gmsh.option.setNumber("Mesh.Algorithm3D", 1)  # Delaunay
+gmsh.option.setNumber("Mesh.SubdivisionAlgorithm", 2)  # All quads
+
+# Crear sólidos
+soil1 = gmsh.model.occ.addBox(0, 0, -H1, Lx, Ly, H1)
+soil2 = gmsh.model.occ.addBox(0, 0, -(H1 + H2), Lx, Ly, H2)
+soil3 = gmsh.model.occ.addBox(0, 0, -Lz, Lx, Ly, H3)
+excav = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, B / 4, B / 4, tz + Df)
+foot = gmsh.model.occ.addBox(x0 / 2, y0 / 2, z_base, B / 4, B / 4, tz)
+gmsh.model.occ.synchronize()
+
+# Cortar la excavación
+soil1_cut, _ = gmsh.model.occ.cut([(3, soil1)], [(3, excav)], removeObject=True, removeTool=False)
+soil2_cut, _ = gmsh.model.occ.cut([(3, soil2)], [(3, excav)], removeObject=True, removeTool=False)
+soil3_cut, _ = gmsh.model.occ.cut([(3, soil3)], [(3, excav)], removeObject=True, removeTool=True)
+gmsh.model.occ.synchronize()
+
+# Etiquetas
+soil1_tag = soil1_cut[0][1]
+soil2_tag = soil2_cut[0][1]
+soil3_tag = soil3_cut[0][1]
 
 # ---------------------------------
-# Generar malla estructurada hexagonal
+# Grupos físicos
 # ---------------------------------
-print("Generando malla hexagonal estructurada...")
+phys_s1 = gmsh.model.addPhysicalGroup(3, [soil1_tag])
+gmsh.model.setPhysicalName(3, phys_s1, "SOIL_1")
+phys_s2 = gmsh.model.addPhysicalGroup(3, [soil2_tag])
+gmsh.model.setPhysicalName(3, phys_s2, "SOIL_2")
+phys_s3 = gmsh.model.addPhysicalGroup(3, [soil3_tag])
+gmsh.model.setPhysicalName(3, phys_s3, "SOIL_3")
+phys_foot = gmsh.model.addPhysicalGroup(3, [foot])
+gmsh.model.setPhysicalName(3, phys_foot, "FOOTING")
+gmsh.model.occ.synchronize()
 
-def create_structured_hex_mesh(x_coords, y_coords, z_coords):
-    """Crea nodos y elementos hexaédricos estructurados"""
-    nodes = []
-    nx_local = len(x_coords) - 1
-    ny_local = len(y_coords) - 1
-    nz_local = len(z_coords) - 1
+# ---------------------------------
+# Tamaño de malla
+# ---------------------------------
+def size_callback(dim, tag, x, y, z, lc):
+    if (x0 - 0.3) <= x <= (x0 + B / 2 + 0.3) and (y0 - 0.3) <= y <= (y0 + B / 2 + 0.3) and (z_base - 1.0) <= z <= (z_top + 1.0):
+        return 0.25
+    return 1.0
 
-    # Crear nodos
-    for k in range(len(z_coords)):
-        for j in range(len(y_coords)):
-            for i in range(len(x_coords)):
-                nodes.append([x_coords[i], y_coords[j], z_coords[k]])
+gmsh.model.mesh.setSizeCallback(size_callback)
 
-    nodes = np.array(nodes)
-
-    # Crear elementos hexaédricos (8 nodos por elemento)
-    elements = []
-    for k in range(nz_local):
-        for j in range(ny_local):
-            for i in range(nx_local):
-                # Índices de los 8 nodos del hexaedro
-                n0 = k * len(y_coords) * len(x_coords) + j * len(x_coords) + i
-                n1 = n0 + 1
-                n2 = n0 + len(x_coords) + 1
-                n3 = n0 + len(x_coords)
-                n4 = n0 + len(y_coords) * len(x_coords)
-                n5 = n4 + 1
-                n6 = n4 + len(x_coords) + 1
-                n7 = n4 + len(x_coords)
-
-                elements.append([n0, n1, n2, n3, n4, n5, n6, n7])
-
-    return nodes, np.array(elements)
-
-# Generar coordenadas
-x_coords = np.linspace(0, Lx, nx + 1)
-y_coords = np.linspace(0, Ly, ny + 1)
-
-# Coordenadas Z por capas
-z_coords_soil1 = np.linspace(-H1, 0, nz1 + 1)
-z_coords_soil2 = np.linspace(-(H1 + H2), -H1, nz2 + 1)[:-1]  # Excluir el último nodo (compartido)
-z_coords_soil3 = np.linspace(-Lz, -(H1 + H2), nz3 + 1)[:-1]  # Excluir el último nodo
-
-# Combinar coordenadas Z
-z_coords = np.concatenate([z_coords_soil3, z_coords_soil2, z_coords_soil1])
-
-# Crear malla del suelo
-nodes_soil, elements_soil = create_structured_hex_mesh(x_coords, y_coords, z_coords)
-
-# Identificar elementos por capa
-num_elem_per_layer = nx * ny
-total_layers = nz1 + nz2 + nz3
-
-domain_id_soil = np.zeros(len(elements_soil), dtype=int)
-elem_idx = 0
-
-# SOIL_3 (capa inferior)
-for k in range(nz3):
-    for _ in range(num_elem_per_layer):
-        domain_id_soil[elem_idx] = 3  # SOIL_3
-        elem_idx += 1
-
-# SOIL_2 (capa media)
-for k in range(nz2):
-    for _ in range(num_elem_per_layer):
-        domain_id_soil[elem_idx] = 2  # SOIL_2
-        elem_idx += 1
-
-# SOIL_1 (capa superior) - excluir la zona de la zapata
-elements_to_keep = []
-for k in range(nz1):
-    layer_z = z_coords_soil1[k]
-    for j in range(ny):
-        y_elem = (y_coords[j] + y_coords[j + 1]) / 2
-        for i in range(nx):
-            x_elem = (x_coords[i] + x_coords[i + 1]) / 2
-
-            # Verificar si está en la zona de la zapata
-            in_footing_zone = (x_foot_start <= x_elem <= x_foot_end and
-                              y_foot_start <= y_elem <= y_foot_end and
-                              z_base <= layer_z <= z_top)
-
-            if not in_footing_zone:
-                domain_id_soil[elem_idx] = 1  # SOIL_1
-                elements_to_keep.append(elem_idx)
-            # Si está en zona de zapata, no lo agregamos
-
-            elem_idx += 1
-
-# Filtrar elementos del suelo (solo los que no están en zona de zapata)
-elements_soil_filtered = elements_soil[elements_to_keep]
-domain_id_soil_filtered = domain_id_soil[elements_to_keep]
-
-# Crear malla de la zapata
-x_coords_foot = np.linspace(x_foot_start, x_foot_end, 6)
-y_coords_foot = np.linspace(y_foot_start, y_foot_end, 6)
-z_coords_foot = np.linspace(z_base, z_top, nz_foot + 1)
-
-nodes_foot, elements_foot = create_structured_hex_mesh(x_coords_foot, y_coords_foot, z_coords_foot)
-domain_id_foot = np.full(len(elements_foot), 4, dtype=int)  # FOOTING
-
-# Combinar nodos y elementos
-offset = len(nodes_soil)
-elements_foot_offset = elements_foot + offset
-points = np.vstack([nodes_soil, nodes_foot])
-elements_all = np.vstack([elements_soil_filtered, elements_foot_offset])
-domain_id_combined = np.concatenate([domain_id_soil_filtered, domain_id_foot])
-
-print(f"   - Total de nodos: {len(points)}")
-print(f"   - Elementos SOIL (filtrados): {len(elements_soil_filtered)}")
-print(f"   - Elementos FOOTING: {len(elements_foot)}")
-print(f"   - Total hexahedros: {len(elements_all)}")
+# ---------------------------------
+# Generar malla
+# ---------------------------------
+print("Generando malla 3D con hexaedros...")
+gmsh.model.mesh.generate(3)
+gmsh.model.mesh.recombine()
+gmsh.write("mallas/zapata_3D_cuarto_hex.msh")
 
 # ---------------------------------
 # Conversión a PyVista y exportes
 # ---------------------------------
+node_tags, node_coords, _ = gmsh.model.mesh.getNodes()
+points = node_coords.reshape(-1, 3)
+
+# Obtener todos los tipos de elementos
+all_elem_types = gmsh.model.mesh.getElementTypes()
+
 cells_list = []
 celltypes_list = []
+domain_id_list = []
 
-# Agregar todos los elementos hexaédricos
-for elem in elements_all:
-    cells_list.append(8)  # 8 nodos por hexaedro
-    cells_list.extend(elem)
+color_map = {phys_s1: 1, phys_s2: 2, phys_s3: 3, phys_foot: 4}
 
-cells = np.array(cells_list)
-celltypes = np.full(len(elements_all), pv.CellType.HEXAHEDRON, dtype=np.uint8)
+# Mapeo de tipos de elementos gmsh a PyVista
+type_map_gmsh_to_pv = {
+    4: (pv.CellType.TETRA, 4, "tetra"),           # Tetraedro
+    5: (pv.CellType.HEXAHEDRON, 8, "hexahedron"), # Hexaedro
+    6: (pv.CellType.WEDGE, 6, "wedge"),           # Prisma
+    7: (pv.CellType.PYRAMID, 5, "pyramid")        # Pirámide
+}
 
-meshio_cells = [("hexahedron", elements_all + 1)]  # meshio usa índices basados en 1
-meshio_cell_data_list = [domain_id_combined.astype(np.int32)]
+meshio_cells = []
+meshio_cell_data_list = []
+
+for elem_type in all_elem_types:
+    if elem_type not in type_map_gmsh_to_pv:
+        continue
+
+    pv_type, nodes_per_elem, meshio_name = type_map_gmsh_to_pv[elem_type]
+
+    etags, ntags = gmsh.model.mesh.getElementsByType(elem_type)
+    if len(etags) == 0:
+        continue
+
+    connectivity = ntags - 1
+    elem_tags = etags
+
+    # Identificar dominio de cada elemento
+    domain_id = np.zeros(len(elem_tags), dtype=int)
+
+    for pg, color in color_map.items():
+        ents = gmsh.model.getEntitiesForPhysicalGroup(3, pg)
+        for ent in ents:
+            try:
+                etags_local, _ = gmsh.model.mesh.getElementsByType(elem_type, ent)
+                for eid in etags_local:
+                    idx = np.where(elem_tags == eid)[0]
+                    if len(idx) > 0:
+                        domain_id[idx] = color
+            except:
+                pass
+
+    # Agregar a PyVista
+    cells = np.insert(connectivity.reshape(-1, nodes_per_elem), 0, nodes_per_elem, axis=1).ravel()
+    cells_list.append(cells)
+    celltypes_list.append(np.full(len(connectivity) // nodes_per_elem, pv_type, dtype=np.uint8))
+    domain_id_list.append(domain_id)
+
+    # Agregar a meshio (índices basados en 1)
+    cells_meshio = connectivity.reshape(-1, nodes_per_elem) + 1
+    meshio_cells.append((meshio_name, cells_meshio))
+    meshio_cell_data_list.append(domain_id.astype(np.int32))
+
+    print(f"   - {meshio_name}: {len(elem_tags)} elementos")
+
+# Combinar todas las celdas para PyVista
+if cells_list:
+    cells = np.hstack(cells_list)
+    celltypes = np.hstack(celltypes_list)
+    domain_id_combined = np.hstack(domain_id_list)
+else:
+    print("❌ No se generaron elementos.")
+    gmsh.finalize()
+    exit(1)
 
 # Crear grid de PyVista
 grid = pv.UnstructuredGrid(cells, celltypes, points)
 grid.cell_data["dominio"] = domain_id_combined
 
-# Guardar VTU para ParaView
 vtu_path = "mallas/zapata_3D_cuarto_hex.vtu"
 grid.save(vtu_path)
 print(f"✅ Guardado VTK: {vtu_path}")
 
-# Guardar XDMF con meshio
-if meshio_cells:
-    xdmf_path = "mallas/zapata_3D_cuarto_hex.xdmf"
-    mesh = meshio.Mesh(points, meshio_cells, cell_data={"dominio": meshio_cell_data_list})
-    meshio.write(xdmf_path, mesh)
-    print(f"✅ Guardado XDMF: {xdmf_path}")
+xdmf_path = "mallas/zapata_3D_cuarto_hex.xdmf"
+mesh = meshio.Mesh(points, meshio_cells, cell_data={"dominio": meshio_cell_data_list})
+meshio.write(xdmf_path, mesh)
+print(f"✅ Guardado XDMF: {xdmf_path}")
+
+gmsh.finalize()
 
 # ---------------------------------
 # Visualización rápida
 # ---------------------------------
-print("\n✅ Malla hexagonal estructurada generada exitosamente")
+print("✅ Malla generada exitosamente")
 print(f"   - Número de puntos: {len(points)}")
-print(f"   - Número total de elementos: {len(domain_id_combined)}")
+print(f"   - Número de elementos: {len(domain_id_combined)}")
 print(f"   - Dominios: SOIL_1, SOIL_2, SOIL_3, FOOTING")
-print(f"\n📊 Para visualizar en ParaView:")
-print(f"   paraview {vtu_path}")
-print(f"\n💡 Malla 100% hexaédrica estructurada para OpenSees")
 
 # Descomenta las siguientes líneas si quieres ver la visualización interactiva:
 # plotter = pv.Plotter()
