@@ -301,11 +301,89 @@ def configurar_analisis():
     print("✅ Análisis configurado (20 pasos de carga)")
 
 
-def ejecutar_analisis():
-    """Ejecuta el análisis estático con algoritmo adaptativo."""
-    print("\n🚀 Ejecutando análisis...")
+def ejecutar_fase_gravedad():
+    """Ejecuta fase de gravedad (consolidación bajo peso propio)."""
+    print("\n🌍 FASE 1: APLICACIÓN DE GRAVEDAD (Peso propio)")
+    print("="*80)
 
-    n_steps = 20  # 20 pasos con LoadControl 0.05
+    # La gravedad ya está aplicada en los elementos (b1=0, b2=0, b3=-9.81)
+    # Solo necesitamos hacer el análisis sin cargas adicionales
+
+    # Configurar análisis para fase de gravedad
+    ops.wipeAnalysis()
+    ops.constraints('Plain')
+    ops.numberer('RCM')
+    ops.system('BandGeneral')
+    ops.test('NormDispIncr', 1.0e-5, 100, 0)
+    ops.algorithm('Newton')
+    ops.integrator('LoadControl', 0.1)  # 10 pasos para gravedad
+    ops.analysis('Static')
+
+    print("⚙️  Análisis de gravedad configurado")
+    print("   Aplicando peso propio del suelo y zapata en 10 pasos...")
+
+    n_steps_gravity = 10
+    ok = 0
+
+    for i in range(n_steps_gravity):
+        ok = ops.analyze(1)
+
+        if ok != 0:
+            print(f"   ⚠️  Paso {i+1}/{n_steps_gravity} falló, intentando algoritmo alternativo...")
+
+            ops.algorithm('ModifiedNewton', '-initial')
+            ok = ops.analyze(1)
+
+            if ok != 0:
+                ops.algorithm('NewtonLineSearch')
+                ok = ops.analyze(1)
+
+            if ok != 0:
+                ops.algorithm('KrylovNewton')
+                ok = ops.analyze(1)
+
+            if ok == 0:
+                ops.algorithm('Newton')
+                print(f"   ✅ Paso {i+1}/{n_steps_gravity} convergió")
+            else:
+                print(f"   ❌ Paso {i+1}/{n_steps_gravity} falló")
+                return False
+        else:
+            if (i+1) % 2 == 0:
+                print(f"   ✓ Paso {i+1}/{n_steps_gravity} completado")
+
+    if ok == 0:
+        print(f"✅ Fase de gravedad completada exitosamente")
+        print(f"   Suelo consolidado bajo peso propio\n")
+
+        # Mantener las cargas de gravedad constantes
+        ops.loadConst('-time', 0.0)
+
+        return True
+    else:
+        print(f"❌ Fase de gravedad falló")
+        return False
+
+
+def ejecutar_fase_carga():
+    """Ejecuta fase de carga de la zapata."""
+    print("\n📦 FASE 2: APLICACIÓN DE CARGA DE ZAPATA")
+    print("="*80)
+
+    # Configurar análisis para carga de zapata
+    ops.wipeAnalysis()
+    ops.constraints('Plain')
+    ops.numberer('RCM')
+    ops.system('BandGeneral')
+    ops.test('NormDispIncr', 1.0e-4, 100, 0)
+    ops.algorithm('Newton')
+    ops.integrator('LoadControl', 0.05)  # 20 pasos para carga
+    ops.analysis('Static')
+
+    print("⚙️  Análisis de carga configurado")
+    print("   Aplicando carga de zapata en 20 pasos...")
+
+    n_steps = 20
     ok = 0
 
     for i in range(n_steps):
@@ -314,21 +392,17 @@ def ejecutar_analisis():
         if ok != 0:
             print(f"   ⚠️  Paso {i+1}/{n_steps} falló, intentando con algoritmo alternativo...")
 
-            # Intentar con algoritmo modificado de Newton
             ops.algorithm('ModifiedNewton', '-initial')
             ok = ops.analyze(1)
 
             if ok != 0:
-                # Intentar con NewtonLineSearch
                 ops.algorithm('NewtonLineSearch')
                 ok = ops.analyze(1)
 
             if ok != 0:
-                # Intentar con KrylovNewton
                 ops.algorithm('KrylovNewton')
                 ok = ops.analyze(1)
 
-            # Volver a Newton para siguientes pasos
             if ok == 0:
                 ops.algorithm('Newton')
                 print(f"   ✅ Paso {i+1}/{n_steps} convergió con algoritmo alternativo")
@@ -336,14 +410,14 @@ def ejecutar_analisis():
                 print(f"   ❌ Paso {i+1}/{n_steps} falló incluso con algoritmos alternativos")
                 break
         else:
-            if (i+1) % 5 == 0:  # Mostrar progreso cada 5 pasos
+            if (i+1) % 5 == 0:
                 print(f"   ✓ Paso {i+1}/{n_steps} completado")
 
     if ok == 0:
-        print(f"✅ Análisis completado exitosamente ({n_steps} pasos)")
+        print(f"✅ Fase de carga completada exitosamente ({n_steps} pasos)")
         return True
     else:
-        print(f"❌ Error en análisis después de {i+1} pasos")
+        print(f"❌ Error en fase de carga después de {i+1} pasos")
         return False
 
 
@@ -481,15 +555,23 @@ def main():
         aplicar_condiciones_frontera(nodos)
         aplicar_cargas(nodos)
 
-        # 4. Configurar y ejecutar análisis
+        # 4. Ejecutar análisis en dos fases
         print("\n" + "="*80)
-        print("PASO 4: ANÁLISIS")
+        print("PASO 4: ANÁLISIS EN DOS FASES")
         print("="*80)
-        configurar_analisis()
-        exito = ejecutar_analisis()
 
-        if not exito:
-            print("\n❌ El análisis falló")
+        # Fase 1: Gravedad (consolidación bajo peso propio)
+        exito_gravedad = ejecutar_fase_gravedad()
+
+        if not exito_gravedad:
+            print("\n❌ La fase de gravedad falló")
+            sys.exit(1)
+
+        # Fase 2: Carga de zapata
+        exito_carga = ejecutar_fase_carga()
+
+        if not exito_carga:
+            print("\n❌ La fase de carga falló")
             sys.exit(1)
 
         # 5. Extraer resultados
