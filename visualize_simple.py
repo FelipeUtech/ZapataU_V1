@@ -107,25 +107,38 @@ contour = ax1.contourf(x_surf, y_surf, settlement_surf,
                        zdir='z')
 
 # 4. PLANOS DE SIMETRÍA con asentamientos
-# Plano X=0 (muy simplificado)
+# Filtrar zona de excavación: nodos dentro del área de zapata y encima de ella
+z_excavacion_limite = z_top_zapata  # Por encima de este nivel es excavación
+
+# Plano X=0 (muy simplificado, sin excavación)
 df_x0 = df_3d[df_3d['X'] < 0.1].copy()
 if len(df_x0) > 0:
-    y_x0 = df_x0['Y'].values
-    z_x0 = df_x0['Z'].values
-    s_x0 = df_x0['Settlement_mm'].values
+    # Filtrar excavación: eliminar puntos dentro del área de zapata y encima del tope
+    mask_no_excavacion = ~((df_x0['Y'] <= L_quarter) & (df_x0['Z'] > z_excavacion_limite))
+    df_x0 = df_x0[mask_no_excavacion]
 
-    scatter_x0 = ax1.scatter(np.zeros_like(y_x0), y_x0, z_x0, c=s_x0,
-                             cmap='RdYlBu_r', s=30, alpha=0.6, edgecolor='none')
+    if len(df_x0) > 0:
+        y_x0 = df_x0['Y'].values
+        z_x0 = df_x0['Z'].values
+        s_x0 = df_x0['Settlement_mm'].values
 
-# Plano Y=0 (muy simplificado)
+        scatter_x0 = ax1.scatter(np.zeros_like(y_x0), y_x0, z_x0, c=s_x0,
+                                 cmap='RdYlBu_r', s=30, alpha=0.6, edgecolor='none')
+
+# Plano Y=0 (muy simplificado, sin excavación)
 df_y0 = df_3d[df_3d['Y'] < 0.1].copy()
 if len(df_y0) > 0:
-    x_y0 = df_y0['X'].values
-    z_y0 = df_y0['Z'].values
-    s_y0 = df_y0['Settlement_mm'].values
+    # Filtrar excavación: eliminar puntos dentro del área de zapata y encima del tope
+    mask_no_excavacion = ~((df_y0['X'] <= B_quarter) & (df_y0['Z'] > z_excavacion_limite))
+    df_y0 = df_y0[mask_no_excavacion]
 
-    scatter_y0 = ax1.scatter(x_y0, np.zeros_like(x_y0), z_y0, c=s_y0,
-                             cmap='RdYlBu_r', s=30, alpha=0.6, edgecolor='none')
+    if len(df_y0) > 0:
+        x_y0 = df_y0['X'].values
+        z_y0 = df_y0['Z'].values
+        s_y0 = df_y0['Settlement_mm'].values
+
+        scatter_y0 = ax1.scatter(x_y0, np.zeros_like(x_y0), z_y0, c=s_y0,
+                                 cmap='RdYlBu_r', s=30, alpha=0.6, edgecolor='none')
 
 # Colorbar
 cbar = plt.colorbar(contour, ax=ax1, shrink=0.5, aspect=10, pad=0.1)
@@ -186,20 +199,27 @@ ax2.grid(True, alpha=0.3)
 # ============================================================================
 ax3 = fig.add_subplot(2, 3, 3)
 
-# Datos del plano X=0
-if len(df_x0) > 0:
+# Datos del plano X=0 (ya filtrado arriba, sin excavación)
+# Recargar df_x0 con filtro de excavación para el corte
+df_x0_corte = df_3d[df_3d['X'] < 0.1].copy()
+if len(df_x0_corte) > 0:
+    # Filtrar excavación
+    mask_no_excavacion = ~((df_x0_corte['Y'] <= L_quarter) & (df_x0_corte['Z'] > z_top_zapata))
+    df_x0_corte = df_x0_corte[mask_no_excavacion]
+
+if len(df_x0_corte) > 0:
     # Reorganizar datos para contorno
-    y_unique = sorted(df_x0['Y'].unique())
-    z_unique = sorted(df_x0['Z'].unique(), reverse=True)
+    y_unique = sorted(df_x0_corte['Y'].unique())
+    z_unique = sorted(df_x0_corte['Z'].unique(), reverse=True)
 
     Y_grid, Z_grid = np.meshgrid(y_unique, z_unique)
     S_grid = np.zeros_like(Y_grid)
 
     for i, z in enumerate(z_unique):
         for j, y in enumerate(y_unique):
-            mask = (np.abs(df_x0['Y'] - y) < 0.01) & (np.abs(df_x0['Z'] - z) < 0.01)
+            mask = (np.abs(df_x0_corte['Y'] - y) < 0.01) & (np.abs(df_x0_corte['Z'] - z) < 0.01)
             if mask.any():
-                S_grid[i, j] = df_x0[mask]['Settlement_mm'].values[0]
+                S_grid[i, j] = df_x0_corte[mask]['Settlement_mm'].values[0]
 
     contour3 = ax3.contourf(Y_grid, Z_grid, S_grid, levels=15, cmap='RdYlBu_r')
     ax3.contour(Y_grid, Z_grid, S_grid, levels=8, colors='black', linewidths=0.5, alpha=0.3)
@@ -236,8 +256,10 @@ ax3.grid(True, alpha=0.3)
 # ============================================================================
 ax4 = fig.add_subplot(2, 3, 4)
 
-# Perfil vertical en el centro (x≈0, y≈0)
+# Perfil vertical en el centro (x≈0, y≈0) - filtrar excavación
 df_centro = df_3d[(df_3d['X'] < 0.1) & (df_3d['Y'] < 0.1)].copy()
+# Filtrar nodos en excavación (encima del tope de zapata)
+df_centro = df_centro[df_centro['Z'] <= z_top_zapata]
 df_centro = df_centro.sort_values('Z', ascending=False)
 
 if len(df_centro) > 0:

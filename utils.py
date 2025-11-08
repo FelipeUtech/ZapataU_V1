@@ -377,14 +377,19 @@ def fijar_nodos_excavacion(node_coords, zapata, tolerancia=0.01):
 
     for node_tag, (x, y, z) in node_coords.items():
         # Verificar si está en zona de excavación (hueco)
-        # Usar < en lugar de <= para excluir nodos exactamente en los bordes
-        en_area_zapata = (x_min < x < x_max and y_min < y < y_max)
-        en_hueco = (z_zapata_top < z < 0)  # Excluir superficie (z=0) y tope de zapata
+        # Incluir bordes para asegurar que todos los nodos sin elementos se fijen
+        en_area_zapata = (x_min <= x <= x_max and y_min <= y <= y_max)
+        en_hueco = (z_zapata_top < z <= 0)  # Excluir tope de zapata, incluir superficie
 
         if en_area_zapata and en_hueco:
             # Fijar completamente (estos nodos no tienen elementos)
-            ops.fix(node_tag, 1, 1, 1)
-            nodos_fijados += 1
+            # Ignorar si el nodo ya está fijo por condiciones de borde
+            try:
+                ops.fix(node_tag, 1, 1, 1)
+                nodos_fijados += 1
+            except:
+                # Nodo ya está fijo, continuar
+                pass
 
     return nodos_fijados
 
@@ -595,17 +600,22 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
                 #     tipo = 'HUECO' if es_hueco else ('ZAPATA' if es_zapata else 'SUELO')
                 #     print(f"  DEBUG [{tipo}]: z={z_elem:6.2f}, en_area_zapata={en_area_zapata}")
 
-                # NUEVO ENFOQUE: Crear elementos "aire" en excavación en lugar de eliminarlos
-                # Esto mantiene la conectividad de nodos y evita matriz singular
-                if es_hueco:
-                    # Elementos de "aire" (material muy blando)
-                    mat_tag = mat_tag_zapata + 1  # Tag de material "aire"
-                    # Nota: Este material se define en run_analysis.py
-                elif es_zapata:
+                # SOLUCIÓN CORRECTA: Crear elementos con material apropiado
+                # - Excavación: material "aire" (muy blando)
+                # - Zapata: material concreto (muy rígido)
+                # - Suelo: materiales por estrato
+                # El visualizador filtrará los elementos "aire" para no mostrarlos
+
+                if es_zapata:
+                    # Elemento de zapata (concreto)
                     mat_tag = mat_tag_zapata
                     n_elements_zapata += 1
+                elif es_hueco:
+                    # Elemento de excavación (aire) - tag después de zapata
+                    mat_tag = mat_tag_zapata + 1
+                    # No incrementar contadores de suelo/zapata
                 else:
-                    # 3. SUELO: todo lo demás
+                    # Elemento de suelo
                     if estratos_suelo:
                         # Buscar en qué estrato está el elemento
                         mat_tag = mat_tag_suelo  # default
@@ -618,6 +628,7 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
                         mat_tag = mat_tag_suelo
                         n_elements_suelo += 1
 
+                # Crear el elemento (todos los tipos)
                 ops.element('stdBrick', element_counter, node1, node2, node3, node4,
                            node5, node6, node7, node8, mat_tag)
                 element_counter += 1
