@@ -214,43 +214,65 @@ print()
 scale_factor = dominio_ancho * 0.1 / abs(max_settlement) if max_settlement != 0 else 100
 
 # ============================================================================
-# VISUALIZACIÓN 1: Modelo sin deformar
+# VISUALIZACIÓN 1: Modelo sin deformar (wireframe limpio)
 # ============================================================================
 print("1. Modelo sin deformar...")
 
-fig1 = plt.figure(figsize=(16, 12))
-ax1 = fig1.add_subplot(111, projection='3d')
+fig1 = plt.figure(figsize=(18, 14))
 
-opsv.plot_model(az_el=(-60, 30), fig_wi_he=(16, 12))
+# Plot con menos nodos visibles y wireframe
+opsv.plot_model(
+    node_labels=0,
+    element_labels=0,
+    az_el=(-65, 25),
+    fig_wi_he=(18, 14),
+    fmt_model={'color': 'black', 'linewidth': 0.5, 'linestyle': '-'}
+)
 
 plt.title(f'Modelo OpenSees - Zapata {B_completa}m×{L_completa}m, Df={Df}m\n'
-          f'Modelo 1/4 simetría - {num_nodos} nodos, {total_elementos} elementos',
+          f'Modelo 1/4 simetría - {num_nodos} nodos, {total_elementos} elementos\n'
+          f'Malla gradual con zapata enterrada a {Df}m',
           fontsize=16, fontweight='bold', pad=20)
 
+# Mejorar labels de ejes
+ax = plt.gca()
+ax.set_xlabel('X (m)', fontsize=12, fontweight='bold')
+ax.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
+ax.set_zlabel('Z (m)', fontsize=12, fontweight='bold')
+
 output1 = 'modelo_opsvis_undeformed.png'
-plt.savefig(output1, dpi=200, bbox_inches='tight', facecolor='white')
+plt.savefig(output1, dpi=150, bbox_inches='tight', facecolor='white')
 print(f"✓ Guardado: {output1}")
 plt.close()
 
 # ============================================================================
-# VISUALIZACIÓN 2: Modelo deformado (vista isométrica)
+# VISUALIZACIÓN 2: Modelo deformado (vista isométrica con color)
 # ============================================================================
 print("2. Modelo deformado - vista isométrica...")
 
-fig2 = plt.figure(figsize=(16, 12))
+fig2 = plt.figure(figsize=(18, 14))
 
+# Deformación con líneas negras para modelo original y azul para deformado
 opsv.plot_defo(
     sfac=scale_factor,
-    az_el=(-60, 30),
-    fig_wi_he=(16, 12)
+    az_el=(-65, 25),
+    fig_wi_he=(18, 14),
+    fmt_undefo={'color': 'gray', 'linewidth': 0.3, 'linestyle': ':', 'alpha': 0.4},
+    fmt_defo={'color': 'blue', 'linewidth': 1.0, 'linestyle': '-'}
 )
 
 plt.title(f'Modelo Deformado - Vista Isométrica (escala {scale_factor:.0f}x)\n'
-          f'Asentamiento máximo: {abs(max_settlement)*1000:.2f} mm, Df={Df}m',
+          f'Asentamiento máximo: {abs(max_settlement)*1000:.2f} mm, Df={Df}m\n'
+          f'Gris: sin deformar | Azul: deformado',
           fontsize=16, fontweight='bold', pad=20)
 
+ax = plt.gca()
+ax.set_xlabel('X (m)', fontsize=12, fontweight='bold')
+ax.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
+ax.set_zlabel('Z (m)', fontsize=12, fontweight='bold')
+
 output2 = 'modelo_opsvis_deformed.png'
-plt.savefig(output2, dpi=200, bbox_inches='tight', facecolor='white')
+plt.savefig(output2, dpi=150, bbox_inches='tight', facecolor='white')
 print(f"✓ Guardado: {output2}")
 plt.close()
 
@@ -259,42 +281,57 @@ plt.close()
 # ============================================================================
 print("3. Vista lateral con deformación...")
 
-fig3 = plt.figure(figsize=(18, 10))
+fig3 = plt.figure(figsize=(20, 12))
 
 opsv.plot_defo(
     sfac=scale_factor,
-    az_el=(0, 0),  # Vista lateral (en el plano YZ)
-    fig_wi_he=(18, 10)
+    az_el=(0, 5),  # Vista lateral casi perpendicular
+    fig_wi_he=(20, 12),
+    fmt_undefo={'color': 'lightgray', 'linewidth': 0.4, 'linestyle': ':', 'alpha': 0.5},
+    fmt_defo={'color': 'darkred', 'linewidth': 0.8, 'linestyle': '-'}
 )
 
 plt.title(f'Vista Lateral - Deformación Vertical (escala {scale_factor:.0f}x)\n'
-          f'Df={Df}m, Asentamiento máx: {abs(max_settlement)*1000:.2f} mm',
+          f'Df={Df}m, Asentamiento máx: {abs(max_settlement)*1000:.2f} mm\n'
+          f'Gris claro: sin deformar | Rojo oscuro: deformado',
           fontsize=16, fontweight='bold', pad=20)
 
+ax = plt.gca()
+ax.set_xlabel('Y (m)', fontsize=12, fontweight='bold')
+ax.set_ylabel('X (m)', fontsize=12, fontweight='bold')
+ax.set_zlabel('Z - Profundidad (m)', fontsize=12, fontweight='bold')
+
 output3 = 'modelo_opsvis_lateral.png'
-plt.savefig(output3, dpi=200, bbox_inches='tight', facecolor='white')
+plt.savefig(output3, dpi=150, bbox_inches='tight', facecolor='white')
 print(f"✓ Guardado: {output3}")
 plt.close()
 
 # ============================================================================
-# VISUALIZACIÓN 4: Vista en planta
+# VISUALIZACIÓN 4: Vista en planta - Superficie
 # ============================================================================
-print("4. Vista en planta...")
+print("4. Vista en planta (superficie)...")
 
-fig4 = plt.figure(figsize=(12, 12))
+fig4 = plt.figure(figsize=(14, 14))
 
 opsv.plot_defo(
     sfac=scale_factor,
-    az_el=(0, 90),  # Vista desde arriba
-    fig_wi_he=(12, 12)
+    az_el=(-90, 90),  # Vista desde arriba
+    fig_wi_he=(14, 14),
+    fmt_undefo={'color': 'lightblue', 'linewidth': 0.3, 'linestyle': '--', 'alpha': 0.4},
+    fmt_defo={'color': 'green', 'linewidth': 0.7, 'linestyle': '-'}
 )
 
-plt.title(f'Vista en Planta - Deformación (escala {scale_factor:.0f}x)\n'
-          f'Zapata {B_completa}m×{L_completa}m, Df={Df}m',
+plt.title(f'Vista en Planta - Deformación en Superficie (escala {scale_factor:.0f}x)\n'
+          f'Zapata {B_completa}m×{L_completa}m (cuarto modelo), Df={Df}m\n'
+          f'Azul claro: sin deformar | Verde: deformado',
           fontsize=16, fontweight='bold', pad=20)
 
+ax = plt.gca()
+ax.set_xlabel('X (m)', fontsize=12, fontweight='bold')
+ax.set_ylabel('Y (m)', fontsize=12, fontweight='bold')
+
 output4 = 'modelo_opsvis_planta.png'
-plt.savefig(output4, dpi=200, bbox_inches='tight', facecolor='white')
+plt.savefig(output4, dpi=150, bbox_inches='tight', facecolor='white')
 print(f"✓ Guardado: {output4}")
 plt.close()
 
