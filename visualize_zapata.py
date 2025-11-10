@@ -772,13 +772,14 @@ try:
         z_top = z_bottom
 
     # Dibujar zapata enterrada a profundidad Df
-    # CORRECTO: BASE en z=-Df, TOPE en z=-Df+h
+    # CORRECTO: TOPE en z=-Df (fondo excavación), BASE en z=-Df-h
     # Rectangle(xy, width, height) donde xy es esquina inferior izquierda
-    zapata_rect = plt.Rectangle((0.3, -Df), 0.4, h_zapata,
+    # La zapata va desde z = -Df-h (base) hasta z = -Df (tope)
+    zapata_rect = plt.Rectangle((0.3, -Df - h_zapata), 0.4, h_zapata,
                                 facecolor='orange', edgecolor='darkorange',
                                 linewidth=3, alpha=0.8, zorder=10)
     ax_strata.add_patch(zapata_rect)
-    z_center_zapata = -Df + h_zapata/2
+    z_center_zapata = -Df - h_zapata/2
     ax_strata.text(0.5, z_center_zapata, 'ZAPATA', ha='center', va='center',
                   fontsize=10, fontweight='bold', color='white', zorder=11)
 

@@ -144,8 +144,8 @@ print()
 print("PASO 3: Aplicando cargas...")
 
 # Identificar nodos en el tope de la zapata
-# BASE en z=-Df, TOPE en z=-Df+h
-z_tope_zapata = -Df + h_zapata
+# BASE en z=-Df-h, TOPE en z=-Df
+z_tope_zapata = -Df  # Tope de zapata (fondo de excavación)
 nodos_zapata_top = utils.identificar_nodos_en_cota(
     node_coords, z_tope_zapata, zapata_modelo, tolerancia=0.05
 )

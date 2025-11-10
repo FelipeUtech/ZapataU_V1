@@ -200,10 +200,10 @@ def generar_malla_gradual(dominio, zapata, params):
     Df = zapata.get('Df', 0.0)  # Profundidad de desplante
 
     # CORRECTO:
-    # - BASE de zapata en z = -Df (nivel de desplante)
-    # - TOPE de zapata en z = -Df + h (donde se aplican cargas)
-    z_zapata_base = -Df
-    z_zapata_top = -Df + h_zapata
+    # - TOPE de zapata en z = -Df (fondo de excavación, donde se aplican cargas)
+    # - BASE de zapata en z = -Df - h (fondo de la zapata)
+    z_zapata_base = -Df - h_zapata
+    z_zapata_top = -Df
 
     # Planos de la zapata
     z_zapata = np.array([z_zapata_base, z_zapata_top])
@@ -366,8 +366,8 @@ def fijar_nodos_excavacion(node_coords, zapata, tolerancia=0.01):
         # No hay excavación, no hacer nada
         return 0
 
-    # Zona de excavación: desde z=0 hasta z=-Df+h, dentro de área BxL
-    z_zapata_top = -Df + h_zapata
+    # Zona de excavación: desde z=0 hasta z=-Df (fondo excavación), dentro de área BxL
+    z_zapata_top = -Df
     x_min = zapata.get('x_min', 0.0)
     y_min = zapata.get('y_min', 0.0)
     x_max = x_min + B_zapata
@@ -556,10 +556,10 @@ def crear_elementos_con_zapata(nx, ny, nz, nodes_per_layer, x_coords, y_coords, 
     Df = zapata.get('Df', 0.0)  # Profundidad de desplante
 
     # CORRECTO:
-    # BASE de zapata en z = -Df
-    # TOPE de zapata en z = -Df + h
-    z_zapata_base = -Df
-    z_zapata_top = -Df + h_zapata
+    # TOPE de zapata en z = -Df (fondo de excavación)
+    # BASE de zapata en z = -Df - h
+    z_zapata_base = -Df - h_zapata
+    z_zapata_top = -Df
 
     # Debug (comentado)
     # print(f"  DEBUG: Parámetros zapata:")

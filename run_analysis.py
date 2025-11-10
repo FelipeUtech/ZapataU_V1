@@ -191,7 +191,7 @@ def main():
     # Identificar nodos en el tope de la zapata
     Df = zapata['Df']
     h_zapata = zapata['h']
-    z_tope_zapata = -Df + h_zapata  # Tope de zapata
+    z_tope_zapata = -Df  # Tope de zapata (fondo de excavación)
     z_base_zapata = -Df - h_zapata  # Base de zapata
 
     # Límites de la zapata en planta (modelo 1/4)

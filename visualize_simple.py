@@ -46,8 +46,8 @@ ax1 = fig.add_subplot(2, 3, 1, projection='3d')
 ax1.set_facecolor('white')
 
 # 1. ZAPATA - Bloque sólido naranja
-z_base_zapata = -Df
-z_top_zapata = -Df + h
+z_base_zapata = -Df - h  # Base de zapata
+z_top_zapata = -Df  # Tope de zapata (fondo de excavación)
 
 zapata_vertices = np.array([
     [0, 0, z_base_zapata], [B_quarter, 0, z_base_zapata],
