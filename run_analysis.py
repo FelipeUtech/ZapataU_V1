@@ -451,6 +451,34 @@ def main():
         df_surface.to_csv(csv_surface_file, index=False)
         print(f"✓ Asentamientos superficie guardados: {csv_surface_file}")
 
+    # Exportar a VTU para ParaView
+    print("\nGenerando archivo VTU para ParaView...")
+    try:
+        # Extraer desplazamientos de todos los nodos desde OpenSees
+        displacements = np.zeros((len(node_coords), 3))
+        settlement_mm = np.zeros(len(node_coords))
+
+        for idx, nid in enumerate(sorted(node_coords.keys())):
+            disp = ops.nodeDisp(nid)
+            displacements[idx] = disp
+            settlement_mm[idx] = -disp[2] * 1000.0  # Convertir a mm (negativo = asentamiento)
+
+        # Crear copia del grid original y agregar resultados
+        result_grid = grid.copy()
+        result_grid.point_data['Displacement_X_m'] = displacements[:, 0]
+        result_grid.point_data['Displacement_Y_m'] = displacements[:, 1]
+        result_grid.point_data['Displacement_Z_m'] = displacements[:, 2]
+        result_grid.point_data['Settlement_mm'] = settlement_mm
+        result_grid.point_data['Displacement_Magnitude_m'] = np.linalg.norm(displacements, axis=1)
+
+        # Guardar archivo VTU
+        vtu_file = 'resultados_analysis.vtu'
+        result_grid.save(vtu_file)
+        print(f"✓ Archivo VTU generado: {vtu_file}")
+        print(f"  Para visualizar: paraview {vtu_file}")
+    except Exception as e:
+        print(f"⚠️  Error al generar VTU: {e}")
+
     # Generar reporte
     if salida['generar_reporte']:
         # Descripción de estratos para reporte
@@ -514,6 +542,7 @@ def main():
     if salida['guardar_csv']:
         print(f"  • {salida['csv_settlements']}")
         print(f"  • {salida['csv_surface']}")
+    print(f"  • resultados_analysis.vtu (ParaView)")
     if salida['generar_reporte']:
         print(f"  • {salida['nombre_reporte']}")
     if salida['generar_graficas']:
