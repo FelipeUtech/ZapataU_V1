@@ -174,14 +174,59 @@ def main():
     ops.model('basic', '-ndm', 3, '-ndf', 3)
     print("✓ Modelo inicializado (3D, 3 DOF)")
 
-    # Crear nodos desde la malla de Gmsh
-    print("\nCreando nodos...")
-    node_coords = {}
-    for node_id, (x, y, z) in enumerate(points, start=1):
-        ops.node(node_id, float(x), float(y), float(z))
-        node_coords[node_id] = np.array([x, y, z])
+    # -------------------------
+    # FUSIONAR NODOS DUPLICADOS
+    # -------------------------
+    print("\nDetectando y fusionando nodos duplicados...")
 
-    print(f"✓ {len(node_coords)} nodos creados")
+    # Crear diccionario para detectar duplicados
+    coord_to_nodes = {}
+    tolerance = 1e-6
+
+    for i, point in enumerate(points):
+        # Redondear coordenadas para detectar duplicados
+        key = (round(point[0] / tolerance) * tolerance,
+               round(point[1] / tolerance) * tolerance,
+               round(point[2] / tolerance) * tolerance)
+
+        if key not in coord_to_nodes:
+            coord_to_nodes[key] = []
+        coord_to_nodes[key].append(i)
+
+    # Crear mapeo: índice_original -> índice_maestro
+    node_mapping = {}  # índice en points (0-based) -> node_id en OpenSees (1-based)
+    master_nodes = {}  # node_id -> coords
+    next_node_id = 1
+    duplicates_found = 0
+
+    for key, node_indices in coord_to_nodes.items():
+        # El primer nodo es el maestro
+        master_idx = node_indices[0]
+
+        # Todos los nodos en esta posición mapean al maestro
+        for idx in node_indices:
+            node_mapping[idx] = next_node_id
+
+        # Guardar coordenadas del nodo maestro
+        master_nodes[next_node_id] = points[master_idx]
+
+        # Contar duplicados
+        if len(node_indices) > 1:
+            duplicates_found += len(node_indices) - 1
+
+        next_node_id += 1
+
+    print(f"  ✓ Nodos duplicados detectados: {duplicates_found}")
+    print(f"  ✓ Nodos únicos (después de fusión): {len(master_nodes)}")
+
+    # Crear nodos en OpenSees (solo los maestros)
+    print("\nCreando nodos en OpenSees...")
+    node_coords = {}
+    for node_id, coords in master_nodes.items():
+        ops.node(node_id, float(coords[0]), float(coords[1]), float(coords[2]))
+        node_coords[node_id] = np.array(coords)
+
+    print(f"✓ {len(node_coords)} nodos creados (interfaces fusionadas)")
 
     # Identificar nodos en superficie (z máxima)
     z_max = points[:, 2].max()
@@ -243,18 +288,21 @@ def main():
     # Definir materiales
     print("\nDefiniendo materiales...")
 
+    # NOTA: Usando 'ElasticIsotropic' sin rho para evitar bug con FourNodeTetrahedron
+    # El parámetro rho causa valores incorrectos en desplazamientos
+
     # Materiales de estratos de suelo
     for i, estrato in enumerate(estratos_suelo, 1):
         mat_tag = i
         ops.nDMaterial('ElasticIsotropic', mat_tag,
-                       estrato['E'], estrato['nu'], estrato['rho'])
+                       estrato['E'], estrato['nu'])
         print(f"✓ {estrato['nombre']} (tag={mat_tag}): E={estrato['E']/1000:.0f} MPa")
 
     # Material concreto (zapata)
     mat_tag_zapata = len(estratos_suelo) + 1
     ops.nDMaterial('ElasticIsotropic', mat_tag_zapata,
-                   mat_zapata['E'], mat_zapata['nu'], mat_zapata['rho'])
-    print(f"✓ Material concreto (tag={mat_tag_zapata}): E={mat_zapata['E']/1e6:.0f} GPa")
+                   mat_zapata['E'], mat_zapata['nu'])
+    print(f"✓ Material concreto (tag={mat_tag_zapata}): E={mat_zapata['E']/1000:.0f} MPa")
 
     # Crear elementos tetraédricos
     print("\nCreando elementos tetraédricos...")
@@ -272,11 +320,17 @@ def main():
             cell_idx += n_points + 1
             continue
 
-        # Nodos del tetraedro (PyVista usa indexación 0-based, OpenSees usa 1-based)
-        n1 = int(cells[cell_idx + 1]) + 1
-        n2 = int(cells[cell_idx + 2]) + 1
-        n3 = int(cells[cell_idx + 3]) + 1
-        n4 = int(cells[cell_idx + 4]) + 1
+        # Nodos del tetraedro (PyVista usa indexación 0-based)
+        # Mapear a node_ids de OpenSees usando node_mapping
+        idx1 = int(cells[cell_idx + 1])
+        idx2 = int(cells[cell_idx + 2])
+        idx3 = int(cells[cell_idx + 3])
+        idx4 = int(cells[cell_idx + 4])
+
+        n1 = node_mapping[idx1]
+        n2 = node_mapping[idx2]
+        n3 = node_mapping[idx3]
+        n4 = node_mapping[idx4]
 
         # Material del elemento
         mat_id = int(material_ids[element_id - 1])

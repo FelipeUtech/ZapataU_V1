@@ -121,8 +121,8 @@ MATERIAL_SUELO = ESTRATOS_SUELO[0]
 # ===================================================================================
 
 MATERIAL_ZAPATA = {
-    'E': 25000000.0,            # Módulo de Young del concreto (kPa) = 25 GPa
-                                # Factor: 1250x más rígido que suelo
+    'E': 25000000.0,            # Módulo de Young del concreto (kPa) = 25 GPa = 25,000 MPa
+                                # Zapata RÍGIDA (5000x más rígido que suelo E1)
     'nu': 0.2,                  # Coeficiente de Poisson del concreto
     'rho': 2400.0,              # Densidad del concreto (kg/m³)
 }

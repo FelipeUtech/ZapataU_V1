@@ -7,18 +7,18 @@ MODELO:
   Dominio: 3.0m × 4.5m × Nonem
   Modelo: Cuarto con simetría
   Malla: GMSH Tetraédrica
-  Elementos: 4845 elementos tetraédricos
-  Nodos: 389
+  Elementos: 4985 elementos tetraédricos
+  Nodos: 347
   Estratos suelo: Estrato 1 (E=5 MPa, h=3.0m), Estrato 2 (E=20 MPa, h=10.0m), Estrato 3 (E=50 MPa, h=7.0m)
   Carga total: 253.53 kN
   Presión contacto: 169.02 kPa
 
 RESULTADOS:
-  Asentamiento máximo: 6027263615322236.0000 mm
-  Asentamiento mínimo: 6027263615322030.0000 mm
-  Asentamiento promedio: 6027263615322086.0000 mm
-  Desviación estándar: 36.7180 mm
-  Diferencial: 206.0000 mm
-  Relación diferencial: 0.0000
+  Asentamiento máximo: 147.8506 mm
+  Asentamiento mínimo: 6.2306 mm
+  Asentamiento promedio: 15.5723 mm
+  Desviación estándar: 27.9469 mm
+  Diferencial: 141.6200 mm
+  Relación diferencial: 0.9579
 
 ================================================================================

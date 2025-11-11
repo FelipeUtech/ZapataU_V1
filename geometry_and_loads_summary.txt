@@ -1,0 +1,210 @@
+================================================================================
+GEOMETRÍA Y CARGAS - ANÁLISIS EN 2 FASES
+================================================================================
+
+================================================================================
+1. GEOMETRÍA DEL MODELO (1/4 con simetría)
+================================================================================
+
+DOMINIO COMPLETO:
+  └─ Dimensiones: 9.0m × 9.0m × 20.0m (completo)
+  └─ Modelo 1/4:  4.5m × 4.5m × 20.0m (por simetría)
+
+ESTRATIFICACIÓN VERTICAL (de superficie hacia abajo):
+
+  z = 0.0m  ─────────────────────────────── Superficie
+            │                             │
+            │   ESTRATO 1 (Suelo blando)  │
+            │   E = 5 MPa                 │
+            │   ρ = 1800 kg/m³            │
+            │   ν = 0.3                   │
+  z = -3.0m ├─────────────────────────────┤ Interfaz E1-E2
+            │                             │
+            │   ESTRATO 2 (Suelo medio)   │
+            │   E = 20 MPa                │
+            │   ρ = 1800 kg/m³            │
+            │   ν = 0.3                   │
+            │                             │
+            │                             │
+ z = -13.0m ├─────────────────────────────┤ Interfaz E2-E3
+            │                             │
+            │   ESTRATO 3 (Suelo rígido)  │
+            │   E = 50 MPa                │
+            │   ρ = 1800 kg/m³            │
+            │   ν = 0.3                   │
+ z = -20.0m ═════════════════════════════════ Base fija (empotramiento)
+
+
+ZAPATA (en el modelo 1/4):
+  └─ Posición en planta: Esquina (0, 0) del modelo
+  └─ Dimensiones zapata completa: 3.0m × 2.0m × 0.4m
+  └─ Dimensiones en modelo 1/4:   1.5m × 1.0m × 0.4m
+  └─ Profundidad de fundación (Df): 1.2m
+  └─ Tope de zapata: z = -1.2m
+  └─ Base de zapata: z = -1.6m
+
+EXCAVACIÓN:
+  └─ Profundidad: 1.2m (desde superficie hasta tope de zapata)
+  └─ Dimensiones en modelo 1/4: 1.5m × 1.0m × 1.2m
+
+MATERIAL ZAPATA (CONCRETO RÍGIDO):
+  └─ E = 25,000 MPa = 25 GPa = 25,000,000 kPa
+  └─ ν = 0.2
+  └─ ρ = 2400 kg/m³
+
+VOLÚMENES (modelo 1/4):
+  └─ Zapata:    1.5m × 1.0m × 0.4m = 0.6 m³
+  └─ Estrato 1: Aproximadamente ~13 m³ (descontando excavación)
+  └─ Estrato 2: 4.5m × 4.5m × 10m = 202.5 m³
+  └─ Estrato 3: 4.5m × 4.5m × 7m = 141.75 m³
+
+
+================================================================================
+2. CONDICIONES DE BORDE
+================================================================================
+
+FONDO (z = -20.0m):
+  └─ Condición: Empotramiento total
+  └─ Restricción: ux = uy = uz = 0
+  └─ Número de nodos: ~20 nodos
+
+PLANO X = 0 (simetría):
+  └─ Condición: Plano de simetría
+  └─ Restricción: ux = 0, uy y uz libres
+  └─ Número de nodos: ~67 nodos
+
+PLANO Y = 0 (simetría):
+  └─ Condición: Plano de simetría
+  └─ Restricción: uy = 0, ux y uz libres
+  └─ Número de nodos: ~67 nodos
+
+SUPERFICIE LIBRE (z = 0):
+  └─ Condición: Libre (excepto donde se aplica carga)
+  └─ Número de nodos: ~25 nodos
+
+
+================================================================================
+3. FASE 1 - GRAVEDAD (Campo de tensiones inicial)
+================================================================================
+
+TIPO DE CARGA: Gravedad aplicada a todo el dominio
+
+GRAVEDAD: g = -9.81 m/s² (dirección -Z)
+
+CARGAS APLICADAS:
+
+  A) ELEMENTOS DE SUELO:
+     Para cada elemento tetraédrico de suelo:
+       - Fuerza gravitacional = Volumen × ρ × g
+       - Distribuida uniformemente en los 4 nodos del tetraedro
+
+     Estrato 1: ρ = 1800 kg/m³
+       Fuerza por m³ = 1800 × 9.81 = 17,658 N/m³ = 17.658 kN/m³
+
+     Estrato 2: ρ = 1800 kg/m³
+       Fuerza por m³ = 17.658 kN/m³
+
+     Estrato 3: ρ = 1800 kg/m³
+       Fuerza por m³ = 17.658 kN/m³
+
+  B) ELEMENTOS DE ZAPATA:
+     Para cada elemento tetraédrico de zapata:
+       ρ = 2400 kg/m³
+       Fuerza por m³ = 2400 × 9.81 = 23,544 N/m³ = 23.544 kN/m³
+
+CÁLCULO DE FUERZAS TOTALES APROXIMADAS (modelo 1/4):
+
+  Peso suelo total (estimado):
+    V_total ≈ 357 m³
+    Peso ≈ 357 × 17.658 = 6,303 kN
+
+  Peso zapata:
+    V_zapata = 0.6 m³
+    Peso = 0.6 × 23.544 = 14.13 kN
+
+  PESO TOTAL ≈ 6,317 kN
+
+RESULTADO ESPERADO:
+  - Asentamientos por consolidación del suelo bajo su propio peso
+  - Campo de tensiones geostáticas establecido
+  - Base para análisis incremental
+
+
+================================================================================
+4. FASE 2 - CARGA INCREMENTAL (Carga de servicio)
+================================================================================
+
+TIPO DE CARGA: Carga puntual en columna
+
+PROCEDIMIENTO:
+  1. Fijar estado de gravedad con: loadConst('-time', 0.0)
+  2. Crear nuevo pattern para carga incremental
+  3. Los desplazamientos serán ADICIONALES a los de gravedad
+
+CARGA DE COLUMNA (modelo completo):
+  └─ Carga total: 1000 kN (≈ 102 toneladas)
+
+CARGA EN MODELO 1/4 (por simetría):
+  └─ Carga aplicada: 1000 / 4 = 250 kN
+
+UBICACIÓN DE APLICACIÓN:
+  └─ Nodos en el área de la zapata en superficie o tope de zapata
+  └─ Coordenadas (x,y): dentro del rectángulo (0, 0) a (1.5m, 1.0m)
+  └─ Coordenada z ≈ 0.0m (superficie) o z ≈ -1.2m (tope zapata)
+
+DISTRIBUCIÓN:
+  └─ Si N nodos en área de carga:
+     Carga por nodo = -250 / N kN (negativa = hacia abajo)
+
+PRESIÓN DE CONTACTO (modelo completo):
+  └─ Área zapata = 3.0m × 2.0m = 6.0 m²
+  └─ Presión = (1000 kN + peso zapata) / 6.0 m²
+  └─ Presión ≈ (1000 + 56.5) / 6.0 ≈ 176 kPa
+
+RESULTADO ESPERADO:
+  - Asentamientos INCREMENTALES por carga de servicio
+  - Estos se SUMAN a los de la Fase 1
+
+
+================================================================================
+5. RESULTADOS QUE SE GENERARÁN
+================================================================================
+
+ARCHIVOS CSV:
+  1. settlements_fase1_gravedad.csv
+     └─ Contiene: X, Y, Z, Settlement_mm (por gravedad)
+
+  2. settlements_fase2_incremental.csv
+     └─ Contiene: X, Y, Z, Settlement_mm (por carga, relativo a estado con gravedad)
+
+  3. settlements_total.csv
+     └─ Contiene: X, Y, Z, Settlement_gravedad_mm, Settlement_carga_mm, Settlement_total_mm
+
+ARCHIVO RESUMEN:
+  4. analysis_summary_2phases.txt
+     └─ Resumen completo con estadísticas de ambas fases
+
+
+================================================================================
+6. RESUMEN DE CARGAS
+================================================================================
+
+FASE 1 - GRAVEDAD:
+┌─────────────────────────────────────────────────────────────┐
+│  Tipo:           Gravedad volumétrica                       │
+│  Magnitud:       g = 9.81 m/s²                             │
+│  Aplicada a:     TODO el dominio (suelo + zapata)          │
+│  Fuerza total:   ~6,317 kN (modelo 1/4)                    │
+│  Distribución:   Por volumen de cada elemento              │
+└─────────────────────────────────────────────────────────────┘
+
+FASE 2 - CARGA COLUMNA:
+┌─────────────────────────────────────────────────────────────┐
+│  Tipo:           Carga puntual distribuida                  │
+│  Magnitud:       250 kN (modelo 1/4)                       │
+│  Aplicada a:     Nodos en área de zapata                   │
+│  Ubicación:      Superficie/tope zapata                     │
+│  Distribución:   Uniforme entre nodos cargados             │
+└─────────────────────────────────────────────────────────────┘
+
+================================================================================
