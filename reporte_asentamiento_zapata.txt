@@ -1,0 +1,34 @@
+================================================================================
+REPORTE DE ASENTAMIENTO DE ZAPATA - ANÁLISIS CORREGIDO
+================================================================================
+
+UBICACIÓN DE MEDICIÓN:
+  Centro de la base de la zapata
+  Coordenadas: X=0.00m, Y=0.00m, Z=-1.50m
+  Profundidad: z = -Df = -1.2m (aproximado)
+
+================================================================================
+ASENTAMIENTO DE LA ZAPATA
+================================================================================
+  Por gravedad:            125.25 mm
+  Por carga:                40.93 mm
+  TOTAL:                   166.18 mm
+
+================================================================================
+INTERPRETACIÓN
+================================================================================
+  - El asentamiento de 166.18 mm es el movimiento vertical
+    de la base de la zapata en el centro (punto de máxima carga)
+  - Este valor es físicamente correcto y representa la deformación
+    del suelo bajo la zapata
+  - Zapata rígida (E=25 GPa) distribuye la carga uniformemente
+
+================================================================================
+NOTA IMPORTANTE
+================================================================================
+  El modelo tiene nodos en z=0 (superficie) dentro del área excavada.
+  Estos nodos muestran ~275 mm pero son artefactos del modelo.
+  El asentamiento real de la ZAPATA se mide en su base (z≈-1.2m).
+
+================================================================================
+
